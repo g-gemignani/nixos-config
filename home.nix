@@ -17,11 +17,11 @@
     # Dotfiles
     home.file = {
       ".bashrc".text = builtins.readFile ./dots/bashrc;
+      ".gitconfig".text = builtins.readFile ./dots/gitconfig;
     };
 
     imports = [
       ./dots/nvim.nix
-      ./dots/git.nix
     ];
   };
 }

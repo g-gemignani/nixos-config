@@ -1,0 +1,13 @@
+[safe]
+	directory = /etc/nixos
+[user]
+	email = guglielmogemignani@gmail.com
+	name = g-gemignani
+[alias]
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	lg = log --oneline --graph --decorate --all
+[core]
+	editor = nvim
