@@ -86,6 +86,7 @@
     google-chrome
     vscode
     nix-search-cli
+    flameshot
     lutris # set wine-ge-proton as runnner for Battle.net
     wine
     winetricks
