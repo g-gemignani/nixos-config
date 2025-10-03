@@ -85,10 +85,12 @@
     silver-searcher
     google-chrome
     vscode
+    nix-search-cli
   #  nix-search-cli.packages.${pkgs.system}.default
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.download-buffer-size = 100000000;
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

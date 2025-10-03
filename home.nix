@@ -12,6 +12,7 @@
       wl-clipboard
       black
       isort
+      nix-search-cli
     ];
 
     # Dotfiles
