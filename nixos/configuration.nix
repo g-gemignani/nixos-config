@@ -84,6 +84,7 @@
     htop
     silver-searcher
     google-chrome
+    vscode
   #  nix-search-cli.packages.${pkgs.system}.default
   ];
 
