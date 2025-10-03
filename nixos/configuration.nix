@@ -86,13 +86,27 @@
     google-chrome
     vscode
     nix-search-cli
-    lutris
+    lutris # set wine-ge-proton as runnner for Battle.net
     wine
     winetricks
     cabextract
     mesa
+    vulkan-loader
     vulkan-tools
+    wineWowPackages.staging
+    dxvk
+    gamemode
   ];
+
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+    extraPackages = with pkgs; [
+      mesa
+    ];
+  };
+
+  programs.gamemode.enable = true;
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.settings.download-buffer-size = 100000000;
@@ -139,13 +153,6 @@
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "25.05"; # Did you read the comment?
-
-  hardware.graphics = {
-    enable = true;
-    extraPackages = with pkgs; [
-      mesa
-    ];
-  };
 
 }
 
