@@ -1,7 +1,13 @@
 PYTHONWARNINGS="ignore:setup.py install is deprecated::setuptools.command.install"; export PYTHONWARNINGS
-bind '"\e[A":history-search-backward'
-bind '"\e[B":history-search-forward'
-alias update-all='cd ~/nixos-config && nix flake update && sudo cp -r ~/nixos-config/* /etc/nixos/ && sudo nixos-rebuild switch --upgrade'
+
+# Only run bind commands in interactive shells
+if [[ $- == *i* ]]; then
+  bind '"\e[A":history-search-backward'
+  bind '"\e[B":history-search-forward'
+fi
+
+alias update-all='sudo -v && cd $NIX_DIR && nix flake update && sudo cp -r $NIX_DIR/* /etc/nixos/ && sudo nixos-rebuild switch --upgrade'
+alias cdn='cd $NIX_DIR'
 
 ssh-add -q ~/.ssh/id_ed25519_bitbucket && ssh-add -q ~/.ssh/id_ed25519_magazino_pki && ssh-add -q ~/.ssh/id_rsa
 
@@ -24,3 +30,4 @@ recursive_replace()
     echo "Illegal number of arguments"
   fi
 }
+export NIX_DIR="/home/gemignani/nixos-config"

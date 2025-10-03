@@ -39,8 +39,8 @@
 
 
   # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
   
 
   # Configure keymap in X11
@@ -86,7 +86,12 @@
     google-chrome
     vscode
     nix-search-cli
-  #  nix-search-cli.packages.${pkgs.system}.default
+    lutris
+    wine
+    winetricks
+    cabextract
+    mesa
+    vulkan-tools
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -134,6 +139,13 @@
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "25.05"; # Did you read the comment?
+
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      mesa
+    ];
+  };
 
 }
 
