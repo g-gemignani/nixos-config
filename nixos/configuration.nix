@@ -84,9 +84,9 @@
     htop
     silver-searcher
     google-chrome
-    vscode
     nix-search-cli
     flameshot
+    # gaming
     lutris # set wine-ge-proton as runnner for Battle.net
     wine
     winetricks
@@ -97,6 +97,11 @@
     wineWowPackages.staging
     dxvk
     gamemode
+    # coding
+    vscode
+    python3
+    uv
+    poetry
   ];
 
   hardware.graphics = {

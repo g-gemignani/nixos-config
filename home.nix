@@ -1,12 +1,15 @@
 {
   pkgs,
   home-manager,
+  lib,
   ...
 }: {
   home-manager.backupFileExtension = "backup";
   home-manager.users.gemignani = {
     home.stateVersion = "25.05";
-
+    home.activation.createCodingDir = ''
+      mkdir -p "$HOME/Coding"
+    '';
     home.packages = with pkgs; [
       alejandra # strict, used in nixpkgs
       wl-clipboard
