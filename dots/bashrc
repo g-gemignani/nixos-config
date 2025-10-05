@@ -7,14 +7,30 @@ if [[ $- == *i* ]]; then
 fi
 export CODING_DIR="$HOME/Coding"
 
-alias update-all='sudo -v && cd $NIX_DIR && nix flake update && sudo cp -r $NIX_DIR/* /etc/nixos/ && sudo nixos-rebuild switch --upgrade'
+alias update-all='(
+  CURRENT_DIR=$(pwd) && \
+  sudo -v && \
+  cd "$NIX_DIR" && \
+  echo -e "\nUpdating Nix flake..." && \
+  nix flake update && \
+  echo -e "\nCopying Nix files to /etc/nixos/..." && \
+  sudo cp -r ./* /etc/nixos/ && \
+  echo -e "\nRebuilding and switching NixOS..." && \
+  sudo nixos-rebuild switch --upgrade && \
+  cd "$CURRENT_DIR" && \
+  echo -e "\nCleaning up old nix generations..." && \
+  nix-env --delete-generations 5 && \
+  nix-collect-garbage -d && \
+  echo -e "Update complete!"
+)'
+
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
 
 ssh-add -q ~/.ssh/id_ed25519_bitbucket && ssh-add -q ~/.ssh/id_ed25519_magazino_pki && ssh-add -q ~/.ssh/id_rsa
 
 forgit() {
-  for file in $(ls -d */); do cd $file; echo "----$file-----"; git $@; cd ..; done
+  for file in $(ls -d */); do cd $file; echo -e "----$file-----"; git $@; cd ..; done
 }
 
 
@@ -22,14 +38,14 @@ recursive_replace()
 {
   if [ $# -eq 2 ]; then
     command="grep -rl --exclude-dir='.git' $1 ./ | xargs sed -i 's/${1}/${2}/g'"
-    echo "running: $command"
+    echo -e "running: $command"
     eval $command
   elif [ $# -eq 3 ]; then
     command="grep -rl --exclude-dir='.git' $2 $1 | xargs sed -i 's/${2}/${3}/g'"
-    echo "running: $command"
+    echo -e "running: $command"
     eval $command
   else
-    echo "Illegal number of arguments"
+    echo -e "Illegal number of arguments"
   fi
 }
 export NIX_DIR="/home/gemignani/nixos-config"
