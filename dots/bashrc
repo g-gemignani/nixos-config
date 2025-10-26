@@ -1,4 +1,5 @@
 PYTHONWARNINGS="ignore:setup.py install is deprecated::setuptools.command.install"; export PYTHONWARNINGS
+eval "$(direnv hook bash)"
 
 # Only run bind commands in interactive shells
 if [[ $- == *i* ]]; then

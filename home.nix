@@ -16,6 +16,7 @@
       black
       isort
       nix-search-cli
+      direnv
     ];
 
     # Dotfiles
@@ -27,5 +28,6 @@
     imports = [
       ./dots/nvim.nix
     ];
+
   };
 }
