@@ -29,6 +29,9 @@
     nixosConfigurations.gemignani = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
+        ({ config, ... }: {
+          nixpkgs.config.allowUnfree = true;
+        })
         ./nixos/configuration.nix
         home-manager.nixosModules.home-manager
         ./home.nix
