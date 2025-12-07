@@ -1,0 +1,10 @@
+# Local secrets and VPN configs
+/.vpn/
+/vpn/*.ovpn
+
+# Allow the example file but not real credentials
+!/vpn/example-client.ovpn
+
+# Ignore raw auth files that may be created locally
+/vpn/auth.txt
+/.vpn/auth.txt

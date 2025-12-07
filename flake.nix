@@ -13,34 +13,33 @@
     nix-search-cli.url = "github:peterldowns/nix-search-cli";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    nix-search-cli,
-    home-manager,
-    ...
-  } @ inputs: let
-    pkgs = import nixpkgs {system = "x86_64-linux";};
+  outputs = { self, nixpkgs, nix-search-cli, home-manager, ... } @ inputs: let
+    pkgs = import nixpkgs { system = "x86_64-linux"; };
+    username = "gemignani";
   in {
-    packages.x86_64-linux = {
-      my-nix-search = pkgs.nix-search-cli;
-    };
+      packages.x86_64-linux = {
+        my-nix-search = pkgs.nix-search-cli;
+      };
 
-    nixosConfigurations.gemignani = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        ({ config, ... }: {
-          nixpkgs.config.allowUnfree = true;
-        })
-        ./nixos/configuration.nix
-        home-manager.nixosModules.home-manager
-        ./home.nix
-      ];
+      nixosConfigurations.${username} = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          (
+            { config, ... }:
+            {
+              nixpkgs.config.allowUnfree = true;
+            }
+          )
+          ./nixos/configuration.nix
+          home-manager.nixosModules.home-manager
+          ./home.nix
+        ];
 
-      # Optional: expose the package
-      specialArgs = {
-        inherit nix-search-cli;
+        # Optional: expose the package and pass username to modules
+        specialArgs = {
+          inherit nix-search-cli;
+          username = username;
+        };
       };
     };
-  };
 }

@@ -7,6 +7,7 @@ if [[ $- == *i* ]]; then
   bind '"\e[B":history-search-forward'
 fi
 export CODING_DIR="$HOME/Coding"
+export NIX_DIR="$HOME/nixos-config"
 
 alias update-all='(
   CURRENT_DIR=$(pwd) && \
@@ -17,7 +18,7 @@ alias update-all='(
   echo -e "\nCopying Nix files to /etc/nixos/..." && \
   sudo cp -r ./* /etc/nixos/ && \
   echo -e "\nRebuilding and switching NixOS..." && \
-  sudo nixos-rebuild switch --upgrade && \
+  sudo nixos-rebuild switch --upgrade --show-trace && \
   cd "$CURRENT_DIR" && \
   echo -e "\nCleaning up old nix generations..." && \
   nix-env --delete-generations 5 && \
@@ -49,4 +50,15 @@ recursive_replace()
     echo -e "Illegal number of arguments"
   fi
 }
-export NIX_DIR="/home/gemignani/nixos-config"
+
+vpn-start-it() {
+  sudo systemctl start surfshark-openvpn-it.service
+}
+
+vpn-stop-it() {
+  sudo systemctl stop surfshark-openvpn-it.service
+}
+
+vpn-status-it() {
+  sudo systemctl status surfshark-openvpn-it.service
+}
