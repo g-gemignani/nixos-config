@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: ^secrets/.*\.sops$
+    pgp: ['2A4284698A6EB6CB']

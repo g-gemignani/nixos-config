@@ -8,3 +8,8 @@
 # Ignore raw auth files that may be created locally
 /vpn/auth.txt
 /.vpn/auth.txt
+
+# Ignore decrypted SSH tarballs and temporary artifacts (moved to secrets/)
+secrets/ssh_keys.tar
+secrets/ssh_keys
+secrets/ssh_keys.*.tmp

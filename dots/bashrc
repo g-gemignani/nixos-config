@@ -7,7 +7,10 @@ if [[ $- == *i* ]]; then
   bind '"\e[B":history-search-forward'
 fi
 export CODING_DIR="$HOME/Coding"
-export NIX_DIR="$HOME/nixos-config"
+: "${NIX_DIR:=}" >/dev/null
+if [ -z "${NIX_DIR:-}" ]; then
+  export NIX_DIR="$HOME/nixos-config"
+fi
 
 alias update-all='(
   CURRENT_DIR=$(pwd) && \
@@ -29,7 +32,17 @@ alias update-all='(
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
 
-ssh-add -q ~/.ssh/id_ed25519_bitbucket && ssh-add -q ~/.ssh/id_ed25519_magazino_pki && ssh-add -q ~/.ssh/id_rsa
+# Ensure gpg-agent is running and SSH_AUTH_SOCK is set appropriately
+gpgconf --launch gpg-agent 2>/dev/null || true
+# If SSH_AUTH_SOCK is already pointing to gpg-agent's ssh socket, skip ssh-add
+if [[ -n "$SSH_AUTH_SOCK" ]] && [[ "$SSH_AUTH_SOCK" == *"S.gpg-agent.ssh"* ]]; then
+  : # gpg-agent is providing SSH; do nothing
+else
+  # Try to locate gpg-agent's ssh socket and export it
+  if [[ -n "$XDG_RUNTIME_DIR" ]] && [[ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]]; then
+    export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
+  fi
+fi
 
 forgit() {
   for file in $(ls -d */); do cd $file; echo -e "----$file-----"; git $@; cd ..; done

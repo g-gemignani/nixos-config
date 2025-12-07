@@ -160,7 +160,7 @@
           "auth.txt.sops"
           "/etc/openvpn/auth.txt"
         ]
-        (builtins.readFile ./sops-vpn.sh);
+        (builtins.readFile ../scripts/sops-vpn.sh);
   };
 
   hardware.graphics = {
