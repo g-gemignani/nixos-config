@@ -52,11 +52,6 @@
       })
     ];
 
-    # Home activation: decrypt sops-encrypted SSH keys (optional)
-    home.activation.decryptSopsSshKeys = lib.mkIf (builtins.pathExists ./secrets/ssh_keys.sops) (
-      builtins.readFile ./scripts/decrypt-ssh-keys.sh
-    );
-
     # Added: VS Code + Nix IDE + settings for nixd
     programs.vscode = {
       enable = true;

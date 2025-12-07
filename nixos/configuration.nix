@@ -116,6 +116,7 @@
     poetry
     # VPN support: OpenVPN + NetworkManager plugins
     openvpn
+    home-manager
     networkmanager-openvpn
     networkmanager
     unzip

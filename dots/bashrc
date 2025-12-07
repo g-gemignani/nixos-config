@@ -12,6 +12,24 @@ if [ -z "${NIX_DIR:-}" ]; then
   export NIX_DIR="$HOME/nixos-config"
 fi
 
+# Try to add private keys to the ssh agent. It's OK if no agent is
+# present; we simply skip adding in that case.
+if command -v ssh-add >/dev/null 2>&1; then
+    if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
+        for key in "$HOME/.ssh"/*; do
+        [ -f "$key" ] || continue
+        case "$key" in
+            *.pub) continue ;;
+        esac
+        chmod 600 "$key" || true
+        ssh-add "$key" 2>/dev/null || true
+        done
+    else
+        # No socket available; skip adding keys.
+        true
+    fi
+fi
+
 alias update-all='(
   CURRENT_DIR=$(pwd) && \
   sudo -v && \
@@ -22,6 +40,7 @@ alias update-all='(
   sudo cp -r ./* /etc/nixos/ && \
   echo -e "\nRebuilding and switching NixOS..." && \
   sudo nixos-rebuild switch --upgrade --show-trace && \
+  home-manager switch --flake /etc/nixos#gemignani && \
   cd "$CURRENT_DIR" && \
   echo -e "\nCleaning up old nix generations..." && \
   nix-env --delete-generations 5 && \

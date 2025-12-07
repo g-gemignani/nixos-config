@@ -92,4 +92,23 @@ if [ -f "$SOPS_FILE" ]; then
   fi
 fi
 
+
+# Try to add private keys to the ssh agent. It's OK if no agent is
+# present; we simply skip adding in that case.
+if command -v ssh-add >/dev/null 2>&1; then
+    if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
+        for key in "$HOME/.ssh"/*; do
+        [ -f "$key" ] || continue
+        case "$key" in
+            *.pub) continue ;;
+        esac
+        chmod 600 "$key" || true
+        ssh-add "$key" 2>/dev/null || true
+        done
+    else
+        # No socket available; skip adding keys.
+        true
+    fi
+fi
+
 exit 0
