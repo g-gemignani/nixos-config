@@ -31,15 +31,6 @@
     home.file = {
       ".bashrc".text = builtins.readFile ./dots/bashrc;
       ".gitconfig".text = builtins.readFile ./dots/gitconfig;
-      ".vpn/README".text = ''
-        This directory is intended for local VPN configs and secrets.
-
-        - Put your provider .ovpn file here, e.g. ~/.vpn/myprovider.ovpn
-        - If required, create ~/.vpn/auth.txt with two lines: username then password
-        - Protect secrets: `chmod 600 ~/.vpn/auth.txt`
-        - Start with: `sudo openvpn --config ~/.vpn/myprovider.ovpn --auth-user-pass /path/to/auth` or use the `vpn-up` helper
-        Do NOT commit files from this directory to git.
-      '';
     };
 
     imports = [
