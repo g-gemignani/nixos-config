@@ -145,7 +145,6 @@
           "@@KEYID@@"
           "@@DECRYPT_USER@@"
           "@@GPG_PRIVATE_PATH@@"
-          "@@OVPN_FILE@@"
           "@@AUTH_SOPS@@"
           "@@AUTH_OUT@@"
         ]
@@ -157,7 +156,6 @@
           "2A4284698A6EB6CB"
           "${username}"
           "/root/local-secrets/gpg-private.asc"
-          "it-mil.prod.surfshark.com_udp.ovpn"
           "auth.txt.sops"
           "/etc/openvpn/auth.txt"
         ]
@@ -204,6 +202,26 @@
       '';
       ExecStart = "${pkgs.openvpn}/bin/openvpn --config /etc/openvpn/it-mil.prod.surfshark.com_udp.ovpn --auth-user-pass /run/surfshark-openvpn.auth";
       ExecStopPost = "/bin/sh -c 'rm -f /run/surfshark-openvpn.auth'";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
+
+  systemd.services.surfshark-openvpn-us = {
+    description = "Surfshark OpenVPN (system) - US";
+    unitConfig = {
+      After = "network-online.target";
+      Wants = "network-online.target";
+    };
+    serviceConfig = {
+      AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+      CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+      Type = "simple";
+      ExecStartPre = ''
+        /bin/sh -c 'modprobe tun || true; if [ -f /etc/openvpn/auth.txt ]; then cp /etc/openvpn/auth.txt /run/surfshark-openvpn-us.auth; chmod 600 /run/surfshark-openvpn-us.auth; else echo "No credentials available at /etc/openvpn/auth.txt" >&2; exit 1; fi'
+      '';
+      ExecStart = "${pkgs.openvpn}/bin/openvpn --config /etc/openvpn/us-nyc.prod.surfshark.com_udp.ovpn --auth-user-pass /run/surfshark-openvpn-us.auth";
+      ExecStopPost = "/bin/sh -c 'rm -f /run/surfshark-openvpn-us.auth'";
       Restart = "on-failure";
       RestartSec = 5;
     };

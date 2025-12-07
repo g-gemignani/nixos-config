@@ -40,7 +40,6 @@ alias update-all='(
   sudo cp -r ./* /etc/nixos/ && \
   echo -e "\nRebuilding and switching NixOS..." && \
   sudo nixos-rebuild switch --upgrade --show-trace && \
-  home-manager switch --flake /etc/nixos#gemignani && \
   cd "$CURRENT_DIR" && \
   echo -e "\nCleaning up old nix generations..." && \
   nix-env --delete-generations 5 && \
@@ -93,4 +92,16 @@ vpn-stop-it() {
 
 vpn-status-it() {
   sudo systemctl status surfshark-openvpn-it.service
+}
+
+vpn-start-us() {
+  sudo systemctl start surfshark-openvpn-us.service
+}
+
+vpn-stop-us() {
+  sudo systemctl stop surfshark-openvpn-us.service
+}
+
+vpn-status-us() {
+  sudo systemctl status surfshark-openvpn-us.service
 }

@@ -10,7 +10,6 @@ RUNUSER_BIN='@@RUNUSER_BIN@@'
 VPN_DIR='@@VPN_DIR@@'
 KEYID='@@KEYID@@'
 DECRYPT_USER='@@DECRYPT_USER@@'
-OVPN_FILE='@@OVPN_FILE@@'
 AUTH_SOPS='@@AUTH_SOPS@@'
 AUTH_OUT='@@AUTH_OUT@@'
 GPG_PRIVATE_PATH='@@GPG_PRIVATE_PATH@@'
@@ -80,13 +79,20 @@ if ! "$GNUPG_BIN" --no-default-keyring --keyring "$KEYRING_FILE" --list-keys >/d
   exit 0
 fi
 
-# Ensure VPN output dir exists and place OVPN file atomically
+# Ensure VPN output dir exists and place OVPN files atomically
 AUTH_TMP="$RUNTIME_DIR/auth.txt.tmp"
 AUTH_FINAL="$AUTH_OUT"
 mkdir -p "$(dirname "$AUTH_FINAL")"
 
-if [ -f "$VPN_DIR/$OVPN_FILE" ]; then
-  install -m 644 "$VPN_DIR/$OVPN_FILE" "/etc/openvpn/$OVPN_FILE" || log "warning: failed to install ovpn file"
+# Install all .ovpn files from the VPN_DIR into /etc/openvpn/ so multiple
+# endpoints are handled by a single activation script. Install atomically
+# and preserve permissions appropriate for configs.
+if [ -d "$VPN_DIR" ]; then
+  for f in "$VPN_DIR"/*.ovpn; do
+    [ -f "$f" ] || continue
+    base=$(basename "$f")
+    install -m 644 "$f" "/etc/openvpn/$base" || log "warning: failed to install ovpn file $base"
+  done
 fi
 
 # Decrypt with retries (bounded, short backoff)
