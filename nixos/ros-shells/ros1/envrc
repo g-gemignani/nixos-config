@@ -1,0 +1,8 @@
+use nix
+
+# Source the local catkin workspace overlay if it exists
+if [ -f "$HOME/Coding/ros1/catkin_ws/devel/setup.bash" ]; then
+  source "$HOME/Coding/ros1/catkin_ws/devel/setup.bash"
+fi
+
+export ROS_DISTRO=noetic

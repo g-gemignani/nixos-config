@@ -1,0 +1,8 @@
+use nix
+
+# Source the local colcon workspace overlay if it exists
+if [ -f "$HOME/Coding/ros2/colcon_ws/install/setup.bash" ]; then
+  source "$HOME/Coding/ros2/colcon_ws/install/setup.bash"
+fi
+
+export ROS_DISTRO=humble

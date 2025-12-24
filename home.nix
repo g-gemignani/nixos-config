@@ -16,6 +16,14 @@
       mkdir -p "$HOME/Coding"
     '';
 
+    # Create ros workspace skeletons and ensure envrc/shell.nix are present
+    home.activation.createRosWorkspaces = ''
+      mkdir -p "$HOME/Coding/ros1/catkin_ws/src"
+      mkdir -p "$HOME/Coding/ros2/colcon_ws/src"
+      chmod -R 0755 "$HOME/Coding/ros1" || true
+      chmod -R 0755 "$HOME/Coding/ros2" || true
+    '';
+
     home.packages = with pkgs; [
       alejandra
       wl-clipboard
@@ -25,6 +33,13 @@
       nixfmt
       direnv
       nixd
+      git
+      cmake
+      pkg-config
+      colcon
+      colcon-common-extensions
+      python3
+      (python3Packages.catkin_pkg)
     ];
 
     # Dotfiles
@@ -32,6 +47,11 @@
       ".bashrc".text = builtins.readFile ./dots/bashrc;
       ".gitconfig".text = builtins.readFile ./dots/gitconfig;
       ".local/bin/make-ssh-sops.sh".source = ./scripts/make-ssh-sops.sh;
+      # Per-workspace direnv + nix shell files (templates are in nixos/ros-shells)
+      "Coding/ros1/shell.nix".source = ./nixos/ros-shells/ros1/shell.nix;
+      "Coding/ros1/.envrc".source = ./nixos/ros-shells/ros1/envrc;
+      "Coding/ros2/shell.nix".source = ./nixos/ros-shells/ros2/shell.nix;
+      "Coding/ros2/.envrc".source = ./nixos/ros-shells/ros2/envrc;
     };
 
     imports = [
