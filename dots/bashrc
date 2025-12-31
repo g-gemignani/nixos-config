@@ -12,24 +12,6 @@ if [ -z "${NIX_DIR:-}" ]; then
   export NIX_DIR="$HOME/nixos-config"
 fi
 
-# Try to add private keys to the ssh agent. It's OK if no agent is
-# present; we simply skip adding in that case.
-if command -v ssh-add >/dev/null 2>&1; then
-    if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
-        for key in "$HOME/.ssh"/*; do
-        [ -f "$key" ] || continue
-        case "$key" in
-            *.pub) continue ;;
-        esac
-        chmod 600 "$key" || true
-        ssh-add "$key" 2>/dev/null || true
-        done
-    else
-        # No socket available; skip adding keys.
-        true
-    fi
-fi
-
 alias update-all='(
   CURRENT_DIR=$(pwd) && \
   sudo -v && \
@@ -44,23 +26,19 @@ alias update-all='(
   echo -e "\nCleaning up old nix generations..." && \
   nix-env --delete-generations 5 && \
   nix-collect-garbage -d && \
+  sudo nixos-rebuild boot && \
   echo -e "Update complete!"
 )'
 
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
 
-# Ensure gpg-agent is running and SSH_AUTH_SOCK is set appropriately
-gpgconf --launch gpg-agent 2>/dev/null || true
-# If SSH_AUTH_SOCK is already pointing to gpg-agent's ssh socket, skip ssh-add
-if [[ -n "$SSH_AUTH_SOCK" ]] && [[ "$SSH_AUTH_SOCK" == *"S.gpg-agent.ssh"* ]]; then
-  : # gpg-agent is providing SSH; do nothing
-else
-  # Try to locate gpg-agent's ssh socket and export it
-  if [[ -n "$XDG_RUNTIME_DIR" ]] && [[ -S "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh" ]]; then
-    export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"
-  fi
-fi
+# Point SSH to GPG
+export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+
+# Tell GPG which terminal window to use for the password popup
+export GPG_TTY=$(tty)
+gpg-connect-agent updatestartuptty /bye > /dev/null 2>&1
 
 forgit() {
   for file in $(ls -d */); do cd $file; echo -e "----$file-----"; git $@; cd ..; done

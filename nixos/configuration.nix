@@ -88,6 +88,9 @@
   # You can use https://search.nixos.org/ to find more packages (and options).
   environment.systemPackages = with pkgs; [
     vim
+    p7zip
+    zip
+    unzip
     wget
     git
     gnupg
@@ -119,48 +122,16 @@
     home-manager
     networkmanager-openvpn
     networkmanager
-    unzip
     # sops for encrypting/decrypting secrets stored in the repo
     sops
     gawk
     util-linux
     procps
     lsof
+    gnused
+    # office
+    onlyoffice-desktopeditors
   ];
-
-  # Optional: import a local root GPG private key before attempting sops decryption.
-  # Place your private key at `/root/local-secrets/gpg-private.asc` (protected, outside the repo).
-  # Combined activation script: import keys (root local and user keyring) and run sops decrypt.
-  # Load the sops-vpn activation script from a separate file and substitute
-  # package paths and variables into it. Build the substituted script inline
-  # to avoid using a top-level let/in which breaks module syntax.
-  system.activationScripts.sops-vpn = {
-    text =
-      lib.replaceStrings
-        [
-          "@@GNUPG_BIN@@"
-          "@@RUNUSER_BIN@@"
-          "@@SOPS_BIN@@"
-          "@@VPN_DIR@@"
-          "@@KEYID@@"
-          "@@DECRYPT_USER@@"
-          "@@GPG_PRIVATE_PATH@@"
-          "@@AUTH_SOPS@@"
-          "@@AUTH_OUT@@"
-        ]
-        [
-          "${pkgs.gnupg}/bin/gpg"
-          "${pkgs.util-linux}/bin/runuser"
-          "${pkgs.sops}/bin/sops"
-          "${builtins.toString ./vpn}"
-          "2A4284698A6EB6CB"
-          "${username}"
-          "/root/local-secrets/gpg-private.asc"
-          "auth.txt.sops"
-          "/etc/openvpn/auth.txt"
-        ]
-        (builtins.readFile ../scripts/sops-vpn.sh);
-  };
 
   hardware.graphics = {
     enable = true;
