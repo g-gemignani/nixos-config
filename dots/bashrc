@@ -25,8 +25,9 @@ alias update-all='(
   cd "$CURRENT_DIR" && \
   echo -e "\nCleaning up old nix generations..." && \
   sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +5 && \
-  nix-collect-garbage -d && \
-  sudo nixos-rebuild boot && \
+  nix-env --delete-generations +5 && \
+  sudo nix-collect-garbage -d && \
+  sudo /run/current-system/bin/switch-to-configuration boot && \
   echo -e "Update complete!"
 )'
 
