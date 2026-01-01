@@ -11,9 +11,11 @@
 
     # Add the nix-search-cli flake input
     nix-search-cli.url = "github:peterldowns/nix-search-cli";
+
+    sops-nix.url = "github:Mic92/sops-nix";
   };
 
-  outputs = { self, nixpkgs, nix-search-cli, home-manager, ... } @ inputs: let
+  outputs = { self, nixpkgs, sops-nix, nix-search-cli, home-manager, ... } @ inputs: let
     pkgs = import nixpkgs { system = "x86_64-linux"; };
     username = "gemignani";
   in {
@@ -31,6 +33,7 @@
             }
           )
           ./nixos/configuration.nix
+          sops-nix.nixosModules.sops # Now this will be correctly referenced
           home-manager.nixosModules.home-manager
           ./home.nix
         ];

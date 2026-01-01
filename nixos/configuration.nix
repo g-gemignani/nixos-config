@@ -157,22 +157,22 @@
     enableSSHSupport = true;
   };
 
+  sops.secrets.vpn_auth = {
+    sopsFile = ../secrets/vpn_secrets.yaml; # Path to your encrypted file
+    owner = "root";
+  };
+
   # This runs as root and uses /etc/openvpn/auth.txt produced by the activation script.
   systemd.services.surfshark-openvpn-it = {
-    description = "Surfshark OpenVPN (system)";
-    unitConfig = {
-      After = "network-online.target";
-      Wants = "network-online.target";
-    };
+    description = "Surfshark OpenVPN (system) - IT";
+    after = [ "network-online.target" "sops-nix.service" ];
+    wants = [ "network-online.target" "sops-nix.service" ];
+
     serviceConfig = {
       AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
       CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
       Type = "simple";
-      ExecStartPre = ''
-        /bin/sh -c 'modprobe tun || true; if [ -f /etc/openvpn/auth.txt ]; then cp /etc/openvpn/auth.txt /run/surfshark-openvpn.auth; chmod 600 /run/surfshark-openvpn.auth; else echo "No credentials available at /etc/openvpn/auth.txt" >&2; exit 1; fi'
-      '';
-      ExecStart = "${pkgs.openvpn}/bin/openvpn --config /etc/openvpn/it-mil.prod.surfshark.com_udp.ovpn --auth-user-pass /run/surfshark-openvpn.auth";
-      ExecStopPost = "/bin/sh -c 'rm -f /run/surfshark-openvpn.auth'";
+      ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${../vpn/it-mil.prod.surfshark.com_udp.ovpn} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
       Restart = "on-failure";
       RestartSec = 5;
     };
@@ -180,19 +180,16 @@
 
   systemd.services.surfshark-openvpn-us = {
     description = "Surfshark OpenVPN (system) - US";
-    unitConfig = {
-      After = "network-online.target";
-      Wants = "network-online.target";
-    };
+    after = [ "network-online.target" "sops-nix.service" ];
+    wants = [ "network-online.target" "sops-nix.service" ];
+    
     serviceConfig = {
       AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
       CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
       Type = "simple";
-      ExecStartPre = ''
-        /bin/sh -c 'modprobe tun || true; if [ -f /etc/openvpn/auth.txt ]; then cp /etc/openvpn/auth.txt /run/surfshark-openvpn-us.auth; chmod 600 /run/surfshark-openvpn-us.auth; else echo "No credentials available at /etc/openvpn/auth.txt" >&2; exit 1; fi'
-      '';
-      ExecStart = "${pkgs.openvpn}/bin/openvpn --config /etc/openvpn/us-nyc.prod.surfshark.com_udp.ovpn --auth-user-pass /run/surfshark-openvpn-us.auth";
-      ExecStopPost = "/bin/sh -c 'rm -f /run/surfshark-openvpn-us.auth'";
+      
+      # We point directly to the decrypted sops file
+      ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${../vpn/us-nyc.prod.surfshark.com_udp.ovpn} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
       Restart = "on-failure";
       RestartSec = 5;
     };

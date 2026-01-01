@@ -1,3 +1,10 @@
+keys:
+  - &host_key  age12y2z87ad30epjmdvxfqufj8x7exse6kl0m5876lgmlm6wrcxqq3qf6q4ug
 creation_rules:
   - path_regex: ^secrets/.*\.sops$
     pgp: ['2A4284698A6EB6CB']
+  - path_regex: ^secrets/.*\.yaml$
+    pgp: ['2A4284698A6EB6CB']
+    key_groups:
+      - age:
+          - *host_key # Now the system itself can open it!

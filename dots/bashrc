@@ -24,7 +24,7 @@ alias update-all='(
   sudo nixos-rebuild switch --upgrade --show-trace && \
   cd "$CURRENT_DIR" && \
   echo -e "\nCleaning up old nix generations..." && \
-  nix-env --delete-generations 5 && \
+  sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +5 && \
   nix-collect-garbage -d && \
   sudo nixos-rebuild boot && \
   echo -e "Update complete!"
