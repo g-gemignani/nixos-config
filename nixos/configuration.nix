@@ -117,6 +117,9 @@
     python3
     uv
     poetry
+    cargo
+    gcc
+    pkg-config
     # VPN support: OpenVPN + NetworkManager plugins
     openvpn
     home-manager
