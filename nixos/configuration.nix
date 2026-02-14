@@ -101,6 +101,7 @@
     nix-search-cli
     nixfmt
     flameshot
+    nix-direnv
     # gaming
     lutris # set wine-ge-proton as runnner for Battle.net
     wine
@@ -109,7 +110,7 @@
     mesa
     vulkan-loader
     vulkan-tools
-    wineWowPackages.staging
+    wineWow64Packages.staging
     dxvk
     gamemode
     # coding
@@ -152,15 +153,15 @@
   ];
   nix.settings.download-buffer-size = 100000000;
   nix.settings = {
-  substituters = [
-    "https://cache.nixos.org/"
-    "https://ros.cachix.org"
-  ];
-  trusted-public-keys = [
-    "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-    "ros.cachix.org-1:dSyZxI8geDCJrwgvCOHDoAfOm5sV1wCPjBkKL+38Rvo="
-  ];
-};
+    substituters = [
+      "https://cache.nixos.org/"
+      "https://ros.cachix.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "ros.cachix.org-1:dSyZxI8geDCJrwgvCOHDoAfOm5sV1wCPjBkKL+38Rvo="
+    ];
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
@@ -178,8 +179,14 @@
   # This runs as root and uses /etc/openvpn/auth.txt produced by the activation script.
   systemd.services.surfshark-openvpn-it = {
     description = "Surfshark OpenVPN (system) - IT";
-    after = [ "network-online.target" "sops-nix.service" ];
-    wants = [ "network-online.target" "sops-nix.service" ];
+    after = [
+      "network-online.target"
+      "sops-nix.service"
+    ];
+    wants = [
+      "network-online.target"
+      "sops-nix.service"
+    ];
 
     serviceConfig = {
       AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
@@ -193,14 +200,20 @@
 
   systemd.services.surfshark-openvpn-us = {
     description = "Surfshark OpenVPN (system) - US";
-    after = [ "network-online.target" "sops-nix.service" ];
-    wants = [ "network-online.target" "sops-nix.service" ];
-    
+    after = [
+      "network-online.target"
+      "sops-nix.service"
+    ];
+    wants = [
+      "network-online.target"
+      "sops-nix.service"
+    ];
+
     serviceConfig = {
       AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
       CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
       Type = "simple";
-      
+
       # We point directly to the decrypted sops file
       ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${../vpn/us-nyc.prod.surfshark.com_udp.ovpn} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
       Restart = "on-failure";

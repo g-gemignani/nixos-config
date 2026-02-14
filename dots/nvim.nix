@@ -3,7 +3,8 @@
   lib,
   config,
   ...
-}: {
+}:
+{
   programs.neovim = {
     enable = true;
     viAlias = true;
@@ -17,7 +18,7 @@
       dracula-vim
     ];
 
-    extraLuaConfig = ''
+    initLua = ''
       -- ALE settings
       vim.g.ale_fix_on_save = 1
       vim.g.ale_fixers = {

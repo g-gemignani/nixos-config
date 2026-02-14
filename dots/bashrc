@@ -12,27 +12,65 @@ if [ -z "${NIX_DIR:-}" ]; then
   export NIX_DIR="$HOME/nixos-config"
 fi
 
-alias update-all='(
-  CURRENT_DIR=$(pwd) && \
-  sudo -v && \
-  cd "$NIX_DIR" && \
-  echo -e "\nUpdating Nix flake..." && \
-  nix flake update && \
-  echo -e "\nCopying Nix files to /etc/nixos/..." && \
-  sudo cp -r ./* /etc/nixos/ && \
-  echo -e "\nRebuilding and switching NixOS..." && \
-  sudo nixos-rebuild switch --upgrade --show-trace && \
-  cd "$CURRENT_DIR" && \
-  echo -e "\nCleaning up old nix generations..." && \
-  sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +5 && \
-  nix-env --delete-generations +5 && \
-  sudo nix-collect-garbage -d && \
-  sudo /run/current-system/bin/switch-to-configuration boot && \
+update_all() {
+  CURRENT_DIR=$(pwd)
+  sudo -v || return 1
+  cd "$NIX_DIR" || return 1
+  echo -e "\nUpdating Nix flake..."
+  if ! nix flake update; then
+    echo "nix flake update failed"; cd "$CURRENT_DIR"; return 1
+  fi
+
+  echo -e "\nCopying Nix files to /etc/nixos/..."
+  if ! sudo cp -r ./* /etc/nixos/; then
+    echo "copy to /etc/nixos failed"; cd "$CURRENT_DIR"; return 1
+  fi
+
+  echo -e "\nRebuilding and switching NixOS..."
+  if ! sudo nixos-rebuild switch --upgrade --show-trace; then
+    echo "nixos-rebuild failed"; cd "$CURRENT_DIR"; return 1
+  fi
+
+  cd "$CURRENT_DIR" || return 1
+  echo -e "\nCleaning up old nix generations..."
+
+  sys_count=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system 2>/dev/null | wc -l | tr -d ' ')
+  if [ -z "$sys_count" ]; then sys_count=0; fi
+  if [ "$sys_count" -gt 10 ]; then
+    echo "Found $sys_count system generations; keeping latest 10"
+    sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +10
+  else
+    echo "Only $sys_count system generations present; skipping system --delete-generations"
+  fi
+
+  user_count=$(nix-env --list-generations 2>/dev/null | wc -l | tr -d ' ')
+  if [ -z "$user_count" ]; then user_count=0; fi
+  if [ "$user_count" -gt 10 ]; then
+    echo "Found $user_count user generations; keeping latest 10"
+    nix-env --delete-generations +10
+  else
+    echo "Only $user_count user generations present; skipping user --delete-generations"
+  fi
+
+  read -r -p "Run full garbage collection now? This will remove unused store paths. [y/N] " answer
+  case "$answer" in
+    [yY][eE][sS]|[yY])
+      sudo nix-collect-garbage -d
+      ;;
+    *)
+      echo "Skipping nix-collect-garbage -d"
+      ;;
+  esac
+
+  sudo /run/current-system/bin/switch-to-configuration boot || true
   echo -e "Update complete!"
-)'
+}
+
+alias update-all='update_all'
 
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
+alias format-bank-excels='cd $CODING_DIR/python && python3 -m unified_bank_statement -i ~/Downloads/ --use-mappings --history --auto'
 
 # Point SSH to GPG
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
