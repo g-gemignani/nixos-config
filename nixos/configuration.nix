@@ -67,6 +67,12 @@
   # Enable touchpad support (enabled default in most desktopManager).
   services.libinput.enable = true;
 
+  services.ollama = {
+    enable = true;
+    package = pkgs.ollama-vulkan;
+    loadModels = [ "gemma:2b" ];
+  };
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users = {
     "${username}" = {
@@ -120,6 +126,7 @@
     cargo
     gcc
     pkg-config
+    ollama
     # VPN support: OpenVPN + NetworkManager plugins
     openvpn
     home-manager
