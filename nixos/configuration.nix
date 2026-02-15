@@ -114,7 +114,6 @@
     dxvk
     gamemode
     # coding
-    vscode
     python3
     uv
     poetry
@@ -126,6 +125,7 @@
     home-manager
     networkmanager-openvpn
     networkmanager
+    transmission_4-qt
     # sops for encrypting/decrypting secrets stored in the repo
     sops
     gawk

@@ -5,6 +5,7 @@
   username,
   ...
 }:
+
 {
   home-manager.backupFileExtension = "backup";
 
