@@ -142,6 +142,7 @@
     gnused
     # office
     onlyoffice-desktopeditors
+    xournalpp
   ];
 
   hardware.graphics = {
@@ -158,7 +159,7 @@
     "nix-command"
     "flakes"
   ];
-  nix.settings.download-buffer-size = 100000000;
+  nix.settings.download-buffer-size = 524288000;
   nix.settings = {
     substituters = [
       "https://cache.nixos.org/"
