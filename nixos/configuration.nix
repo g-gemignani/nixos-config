@@ -184,50 +184,45 @@
     owner = "root";
   };
 
-  # This runs as root and uses /etc/openvpn/auth.txt produced by the activation script.
-  systemd.services.surfshark-openvpn-it = {
-    description = "Surfshark OpenVPN (system) - IT";
-    after = [
-      "network-online.target"
-      "sops-nix.service"
-    ];
-    wants = [
-      "network-online.target"
-      "sops-nix.service"
-    ];
+  systemd.services =
+    let
+      vpnDependencies = [
+        "network-online.target"
+        "sops-nix.service"
+      ];
 
-    serviceConfig = {
-      AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-      CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-      Type = "simple";
-      ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${../vpn/it-mil.prod.surfshark.com_udp.ovpn} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
-      Restart = "on-failure";
-      RestartSec = 5;
+      mkSurfsharkService = region: ovpnFile: {
+        description = "Surfshark OpenVPN (system) - ${region}";
+        after = vpnDependencies;
+        wants = vpnDependencies;
+
+        serviceConfig = {
+          AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+          CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+          ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${ovpnFile} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
+          LockPersonality = true;
+          MemoryDenyWriteExecute = true;
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectClock = true;
+          ProtectControlGroups = true;
+          ProtectHome = true;
+          ProtectKernelLogs = true;
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          Restart = "on-failure";
+          RestartSec = 5;
+          RestrictNamespaces = true;
+          RestrictSUIDSGID = true;
+          Type = "simple";
+          UMask = "0077";
+        };
+      };
+    in
+    {
+      surfshark-openvpn-it = mkSurfsharkService "IT" ../vpn/it-mil.prod.surfshark.com_udp.ovpn;
+      surfshark-openvpn-us = mkSurfsharkService "US" ../vpn/us-nyc.prod.surfshark.com_udp.ovpn;
     };
-  };
-
-  systemd.services.surfshark-openvpn-us = {
-    description = "Surfshark OpenVPN (system) - US";
-    after = [
-      "network-online.target"
-      "sops-nix.service"
-    ];
-    wants = [
-      "network-online.target"
-      "sops-nix.service"
-    ];
-
-    serviceConfig = {
-      AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-      CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-      Type = "simple";
-
-      # We point directly to the decrypted sops file
-      ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${../vpn/us-nyc.prod.surfshark.com_udp.ovpn} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
-      Restart = "on-failure";
-      RestartSec = 5;
-    };
-  };
 
   # (surfshark user unit declared above)
 

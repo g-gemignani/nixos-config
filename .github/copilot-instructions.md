@@ -5,27 +5,27 @@ This repository contains a personal NixOS + Home Manager configuration (flake-ba
 
 Key goals for an AI coding agent working here:
 - Understand the flake-driven layout (`flake.nix`) and how `nixos/configuration.nix` and `home.nix` are imported.
-- Preserve safety around secrets: the repo uses `sops`-encrypted files under `secrets/` and helper scripts in `scripts/`.
+- Preserve safety around secrets: the repo uses `sops`-encrypted files under `secrets/` and bootstrap/update helpers in `install.sh` and `dots/bashrc`.
 - Prefer minimal, targeted edits: keep changes localized to relevant Nix files and scripts.
 
 **Big picture / architecture**
-- `flake.nix` ties inputs (nixpkgs, home-manager) and exposes `nixosConfigurations.<username>`; it assembles system modules including `./nixos/configuration.nix` and `./home.nix`.
-- `nixos/configuration.nix` contains system-level options, packages, and systemd services (e.g. Surfshark OpenVPN units and an activation script built from `scripts/sops-vpn.sh`).
+- `flake.nix` ties inputs (nixpkgs, home-manager, sops-nix) and exposes `nixosConfigurations.<username>`; it assembles system modules including `./nixos/configuration.nix` and `./home.nix`.
+- `default.nix` is the non-flake compatibility entrypoint via `flake-compat`, so legacy `nix-build` style workflows can still resolve the system closure.
+- `nixos/configuration.nix` contains system-level options, packages, and systemd services (e.g. Surfshark OpenVPN units wired to a sops-managed secret).
 - `home.nix` configures the user environment via Home Manager: dotfiles (`dots/`), packages, VS Code settings, and session variables.
-- `scripts/` contains helper scripts for sops-encryption (`make-ssh-sops.sh`) and decryption/activation (`decrypt-ssh-keys.sh`, `sops-vpn.sh`). These are executed manually or via activation scripts.
+- `install.sh` restores GPG state from a backup, while `dots/bashrc` defines local quality-of-life helpers such as `update-all` and VPN service wrappers.
 
 **Data flows and secrets**
-- Encrypted secrets live in `secrets/*.sops`. `make-ssh-sops.sh` produces `secrets/ssh_keys.sops`; `decrypt-ssh-keys.sh` reads it and writes to `~/.ssh/`.
-- `nixos/configuration.nix` includes an `activationScripts.sops-vpn` which substitutes variables into `scripts/sops-vpn.sh` at activation time to produce `/etc/openvpn/auth.txt` for systemd OpenVPN units.
+- Encrypted secrets live under `secrets/` and are decrypted through `sops-nix` at activation/runtime.
+- `nixos/configuration.nix` declares `sops.secrets.vpn_auth` from `secrets/vpn_secrets.yaml`, and the Surfshark OpenVPN services read the resulting secret path directly via `config.sops.secrets.vpn_auth.path`.
 
 **Project-specific conventions**
-- `NIX_DIR` environment variable: many scripts expect `NIX_DIR` (default `~/nixos-config`). Dotfiles export it in `dots/bashrc` and `install.sh` adds it when invoked.
+- `NIX_DIR` environment variable: local shell helpers expect `NIX_DIR` (default `~/nixos-config`). `dots/bashrc` sets a default if it is not already exported by the environment.
 - GPG / SSH agent: The configuration expects `gpg-agent` with SSH support. `home.nix` sets `SSH_AUTH_SOCK` to `$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh` and `dots/bashrc`/scripts try to use this socket.
-- sops usage: prefer calling sops with `--output` so creation rules match the target filename (see `scripts/make-ssh-sops.sh`); scripts attempt to discover PGP recipients from `.sops.yaml` or `nixos/configuration.nix` if needed.
-- Do not commit unencrypted secret material. The repo includes `.sops.yaml` and `secrets/*.sops` and helper scripts assume sops is installed on the machine.
+- Do not commit unencrypted secret material. The repo includes `.sops.yaml` and encrypted files under `secrets/`; the runtime assumes `sops` is installed on the machine.
 
 **Developer workflows / common commands**
-- Update the flake, copy files and rebuild system (used by `install.sh` / `update-all` alias):
+- Update the flake, copy files and rebuild system (used by the `update-all` shell helper):
 
 ```bash
 cd $NIX_DIR         # default: $HOME/nixos-config
@@ -41,28 +41,36 @@ nix build .#homeConfigurations.${USER}.activationPackage
 ./result/activate
 ```
 
-- Encrypt SSH keys into the repo (example):
+- Enter the repository development shell without native flake support:
 
 ```bash
-./scripts/make-ssh-sops.sh -o secrets/ssh_keys.sops id_ed25519 id_deploy
+nix-shell
 ```
 
-- Decrypt SSH keys locally (safe install into `~/.ssh`):
+- Run the local validation helper before rebuilding:
 
 ```bash
-./scripts/decrypt-ssh-keys.sh --verbose
+validate-nix-config
+```
+
+- Restore local GPG material from a backup folder:
+
+```bash
+./install.sh
 ```
 
 **Files worth editing with caution (examples)**
 - `flake.nix` — changes affect how the flake exposes system and home configurations.
-- `nixos/configuration.nix` — system packages, services, activation scripts. Example: Surfshark systemd services and `system.activationScripts.sops-vpn`.
+- `default.nix` — compatibility shim for non-flake tooling; keep it aligned with `flake.lock` and the exported host name.
+- `shell.nix` — compatibility shim for non-flake development shells; keep it aligned with the default flake dev shell.
+- `nixos/configuration.nix` — system packages, services, and sops-managed VPN wiring. Example: Surfshark systemd services and `sops.secrets.vpn_auth`.
 - `home.nix` — user packages, dotfile wiring in `home.file`, VS Code settings under `programs.vscode.profiles.default`.
-- `scripts/*.sh` — shell helpers that manipulate secrets and activation scripts. Ensure `set -euo pipefail` and permission handling are preserved.
+- `install.sh` and `dots/bashrc` — local bootstrap/update helpers. Preserve `set -euo pipefail`, quoting, and permission handling.
 
 **Patterns & examples an agent should follow**
 - When editing Nix files, preserve the existing option structure and `lib`/`pkgs` parameterization used by the module functions (e.g., modules are written as `{ config, lib, pkgs, ... }:`).
 - Prefer adding options or small helper modules over large rewrites. Keep `system.stateVersion` unchanged without explicit migration steps.
-- For scripts that touch secrets, keep strict file permissions (600 for private keys) and the existing temporary-file cleanup `trap` logic.
+- For scripts that touch secrets, keep strict file permissions and avoid writing machine-specific state back into tracked dotfiles.
 
 **Testing / validation steps an agent should run locally**
 - Syntax-check Nix expressions before committing:
@@ -82,14 +90,16 @@ If any section is unclear or you want more detail (e.g., sample `nix build` outp
 
 **Key files & examples**
 - `flake.nix`: shows how `home-manager` is wired into `nixosConfigurations.<username>` and how `specialArgs` (e.g., `username`, `nix-search-cli`) are passed.
+- `default.nix`: bridges non-flake tooling to the flake outputs via `flake-compat`.
+- `shell.nix`: bridges non-flake `nix-shell` usage to the flake dev shell via `flake-compat`.
 - `home.nix`: Home Manager user config. Examples:
 	- Dotfiles wired via `home.file` (`.bashrc` and `.gitconfig`).
 	- `home.sessionVariables` setting `SSH_AUTH_SOCK` to `"$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"`.
 	- VS Code profile settings under `programs.vscode.profiles.default.userSettings`.
 - `nixos/configuration.nix`: System config. Examples:
 	- `environment.systemPackages` lists installed system packages (e.g., `openvpn`, `sops`).
-	- `system.activationScripts.sops-vpn` injects values into `scripts/sops-vpn.sh` to write `/etc/openvpn/auth.txt`.
-	- `systemd.services.surfshark-openvpn-*` units that rely on `/etc/openvpn/auth.txt` created by the activation script.
-- `scripts/make-ssh-sops.sh`: creates and encrypts a tarball of SSH keys; prefers `sops --output` so creation rules match target filename.
-- `scripts/decrypt-ssh-keys.sh`: decrypts `secrets/ssh_keys.sops` safely into `~/.ssh/`, preserves permissions, and attempts to add keys to agent.
+	- `sops.secrets.vpn_auth` exposes the decrypted VPN credentials to systemd units.
+	- `systemd.services.surfshark-openvpn-*` units read the sops-managed credential path directly.
+- `install.sh`: restores GPG backups into `~/.gnupg`, preserves permissions, and leaves the rebuild step explicit.
+- `dots/bashrc`: defines `update-all`, VPN helpers, and small utility functions.
 

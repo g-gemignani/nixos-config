@@ -32,7 +32,6 @@
     home.file = {
       ".bashrc".text = builtins.readFile ./dots/bashrc;
       ".gitconfig".text = builtins.readFile ./dots/gitconfig;
-      ".local/bin/make-ssh-sops.sh".source = ./scripts/make-ssh-sops.sh;
     };
 
     imports = [

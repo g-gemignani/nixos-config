@@ -1,5 +1,7 @@
 PYTHONWARNINGS="ignore:setup.py install is deprecated::setuptools.command.install"; export PYTHONWARNINGS
-eval "$(direnv hook bash)"
+if command -v direnv >/dev/null 2>&1; then
+  eval "$(direnv hook bash)"
+fi
 
 # Only run bind commands in interactive shells
 if [[ $- == *i* ]]; then
@@ -13,25 +15,27 @@ if [ -z "${NIX_DIR:-}" ]; then
 fi
 
 update_all() {
-  CURRENT_DIR=$(pwd)
+  local current_dir sys_count user_count answer
+
+  current_dir=$(pwd)
   sudo -v || return 1
   cd "$NIX_DIR" || return 1
   echo -e "\nUpdating Nix flake..."
   if ! nix flake update; then
-    echo "nix flake update failed"; cd "$CURRENT_DIR"; return 1
+    echo "nix flake update failed"; cd "$current_dir"; return 1
   fi
 
   echo -e "\nCopying Nix files to /etc/nixos/..."
   if ! sudo cp -r ./* /etc/nixos/; then
-    echo "copy to /etc/nixos failed"; cd "$CURRENT_DIR"; return 1
+    echo "copy to /etc/nixos failed"; cd "$current_dir"; return 1
   fi
 
   echo -e "\nRebuilding and switching NixOS..."
   if ! sudo nixos-rebuild switch --upgrade --show-trace; then
-    echo "nixos-rebuild failed"; cd "$CURRENT_DIR"; return 1
+    echo "nixos-rebuild failed"; cd "$current_dir"; return 1
   fi
 
-  cd "$CURRENT_DIR" || return 1
+  cd "$current_dir" || return 1
   echo -e "\nCleaning up old nix generations..."
 
   sys_count=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system 2>/dev/null | wc -l | tr -d ' ')
@@ -66,7 +70,44 @@ update_all() {
   echo -e "Update complete!"
 }
 
+validate_nix_config() {
+  local current_dir
+
+  current_dir=$(pwd)
+  cd "$NIX_DIR" || return 1
+
+  echo -e "\nChecking shell scripts..."
+  bash -n install.sh || {
+    cd "$current_dir" || return 1
+    return 1
+  }
+  bash -n dots/bashrc || {
+    cd "$current_dir" || return 1
+    return 1
+  }
+
+  echo -e "\nChecking flake outputs..."
+  nix flake check || {
+    cd "$current_dir" || return 1
+    return 1
+  }
+
+  echo -e "\nChecking compatibility entrypoints..."
+  nix-instantiate --eval default.nix >/dev/null || {
+    cd "$current_dir" || return 1
+    return 1
+  }
+  nix-instantiate --eval shell.nix >/dev/null || {
+    cd "$current_dir" || return 1
+    return 1
+  }
+
+  cd "$current_dir" || return 1
+  echo -e "Validation complete!"
+}
+
 alias update-all='update_all'
+alias validate-nix-config='validate_nix_config'
 
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
@@ -76,27 +117,49 @@ alias format-bank-excels='cd $CODING_DIR/python && python3 -m unified_bank_state
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 
 # Tell GPG which terminal window to use for the password popup
-export GPG_TTY=$(tty)
-gpg-connect-agent updatestartuptty /bye > /dev/null 2>&1
+if tty -s; then
+  export GPG_TTY=$(tty)
+  gpg-connect-agent updatestartuptty /bye > /dev/null 2>&1
+fi
 
 forgit() {
-  for file in $(ls -d */); do cd $file; echo -e "----$file-----"; git $@; cd ..; done
+  local dir
+
+  for dir in */; do
+    [ -d "$dir" ] || continue
+    (
+      cd "$dir" || exit 1
+      echo -e "----$dir-----"
+      git "$@"
+    )
+  done
 }
 
 
 recursive_replace()
 {
+  local scope search replace
+
   if [ $# -eq 2 ]; then
-    command="grep -rl --exclude-dir='.git' $1 ./ | xargs sed -i 's/${1}/${2}/g'"
-    echo -e "running: $command"
-    eval $command
+    scope="./"
+    search="$1"
+    replace="$2"
   elif [ $# -eq 3 ]; then
-    command="grep -rl --exclude-dir='.git' $2 $1 | xargs sed -i 's/${2}/${3}/g'"
-    echo -e "running: $command"
-    eval $command
+    scope="$1"
+    search="$2"
+    replace="$3"
   else
     echo -e "Illegal number of arguments"
+    return 1
   fi
+
+  if [ ! -e "$scope" ]; then
+    echo -e "Path not found: $scope"
+    return 1
+  fi
+
+  grep -rFlZ --exclude-dir='.git' -- "$search" "$scope" |
+    xargs -0r env SEARCH="$search" REPLACE="$replace" perl -0pi -e 's/\Q$ENV{SEARCH}\E/$ENV{REPLACE}/g'
 }
 
 vpn-start-it() {

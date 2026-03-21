@@ -1,26 +1,13 @@
 #!/usr/bin/env bash
 
-# Exit on error
-set -e
+# Exit on error and undefined variables
+set -euo pipefail
 
 # Authenticate as sudo immediately
 sudo -v
 
-BASHRC="$(dirname "$0")/dots/bashrc"
-NIX_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Add NIX_DIR to PATH in bashrc if not already present
-grep -q "export NIX_DIR=\"$NIX_DIR\"" "$BASHRC" || \
-    echo "export NIX_DIR=\"$NIX_DIR\"" >> "$BASHRC"
-
-# Enable alias expansion
-eval "$(grep '^alias ' "$BASHRC")"
-shopt -s expand_aliases
-source "$BASHRC"
-
-
 # Ask for the backup folder path
-read -p "Enter the path to your gpg-backup folder: " BACKUP_DIR
+read -r -p "Enter the path to your gpg-backup folder: " BACKUP_DIR
 
 # 1. Basic Folder Validation
 if [ ! -d "$BACKUP_DIR" ]; then
@@ -48,14 +35,13 @@ fi
 
 # 4. Handle Configuration Files
 echo "Configuring ~/.gnupg directory..."
-mkdir -p ~/.gnupg
-chmod 700 ~/.gnupg
+install -d -m 700 "$HOME/.gnupg"
 
 # Copy config files if they exist in the backup
 for f in sshcontrol gpg-agent.conf gpg.conf common.conf; do
     if [ -f "$BACKUP_DIR/$f" ]; then
-        cp "$BACKUP_DIR/$f" ~/.gnupg/
-        chmod 600 ~/.gnupg/"$f"
+        cp "$BACKUP_DIR/$f" "$HOME/.gnupg/"
+        chmod 600 "$HOME/.gnupg/$f"
         echo "Restored: $f"
     fi
 done
@@ -71,11 +57,11 @@ gpg-connect-agent updatestartuptty /bye
 # 7. Verification
 echo "--- Verification ---"
 echo "Available SSH Keys in GPG:"
-ssh-add -l
+if ! ssh-add -l; then
+    echo "No SSH identities are currently loaded in the agent."
+fi
 
 echo ""
 echo "GPG Restoration Complete!"
 echo "If git fetch fails, remember to check if your SSH_AUTH_SOCK is exported in your shell config."
-
-# Call update-all
-update-all
+echo "Run 'update-all' when you are ready to rebuild the system."

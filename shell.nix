@@ -14,4 +14,4 @@
   {
     src = ./.;
   }
-).outputs.nixosConfigurations.gemignani.config.system.build.toplevel
+).shellNix
