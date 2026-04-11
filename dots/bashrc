@@ -108,6 +108,7 @@ validate_nix_config() {
 
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'
+alias t4='terminator -l 2x2 &'
 
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'

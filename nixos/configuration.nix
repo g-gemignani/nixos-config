@@ -108,6 +108,7 @@
     nixfmt
     flameshot
     nix-direnv
+    terminator
     # gaming
     lutris # set wine-ge-proton as runnner for Battle.net
     wine
@@ -127,6 +128,7 @@
     gcc
     pkg-config
     ollama
+    github-copilot-cli
     # VPN support: OpenVPN + NetworkManager plugins
     openvpn
     home-manager
