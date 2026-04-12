@@ -3,7 +3,7 @@
 
   inputs = {
     # Add nixpkgs and other necessary inputs
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/9cf7092";
 
     flake-compat = {
       url = "github:NixOS/flake-compat";
