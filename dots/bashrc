@@ -15,59 +15,118 @@ if [ -z "${NIX_DIR:-}" ]; then
 fi
 
 update_all() {
-  local current_dir sys_count user_count answer
+  local current_dir sys_count user_count answer safe_gen
 
   current_dir=$(pwd)
+
+  # Require sudo upfront
   sudo -v || return 1
+
+  # ── 0. Show current state before doing anything ──────────────────────────
+  echo -e "\n=== Current system generations ==="
+  sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+  safe_gen=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
+    | grep current | awk '{print $1}')
+  echo -e "\n>>> Safe/current generation: $safe_gen (will never be deleted) <<<\n"
+
+  # ── 1. Update flake ───────────────────────────────────────────────────────
   cd "$NIX_DIR" || return 1
   echo -e "\nUpdating Nix flake..."
   if ! nix flake update; then
-    echo "nix flake update failed"; cd "$current_dir"; return 1
+    echo "nix flake update failed"
+    cd "$current_dir"; return 1
   fi
 
+  # ── 2. Copy config to /etc/nixos ─────────────────────────────────────────
   echo -e "\nCopying Nix files to /etc/nixos/..."
   if ! sudo cp -r ./* /etc/nixos/; then
-    echo "copy to /etc/nixos failed"; cd "$current_dir"; return 1
+    echo "copy to /etc/nixos failed"
+    cd "$current_dir"; return 1
   fi
 
-  echo -e "\nRebuilding and switching NixOS..."
-  if ! sudo nixos-rebuild switch --upgrade --show-trace; then
-    echo "nixos-rebuild failed"; cd "$current_dir"; return 1
+  # ── 3. Build and TEST (does NOT touch bootloader) ────────────────────────
+  echo -e "\nBuilding and testing new configuration..."
+  echo "NOTE: If this fails or the desktop breaks, just reboot — the previous generation is safe."
+  if ! sudo nixos-rebuild test --show-trace; then
+    echo ""
+    echo "nixos-rebuild test failed. No changes have been made to your boot configuration."
+    echo "Your system is still on generation $safe_gen."
+    cd "$current_dir"; return 1
   fi
 
+  # ── 4. Confirm before making it the boot default ─────────────────────────
+  echo ""
+  echo "Build succeeded and new config is now active in this session."
+  echo "Check that everything works (display manager, apps, etc.) before continuing."
+  echo ""
+  read -r -p "Make this the default boot generation? [y/N] " answer
+  case "$answer" in
+    [yY][eE][sS]|[yY])
+      if ! sudo nixos-rebuild switch --show-trace; then
+        echo "nixos-rebuild switch failed. Rebooting will return you to generation $safe_gen."
+        cd "$current_dir"; return 1
+      fi
+      ;;
+    *)
+      echo ""
+      echo "Keeping generation $safe_gen as boot default."
+      echo "The new config is active in this session only — reboot to go back to gen $safe_gen."
+      cd "$current_dir"
+      return 0
+      ;;
+  esac
+
+  # ── 5. Show new generation state ─────────────────────────────────────────
+  echo -e "\n=== Updated system generations ==="
+  sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+  local new_gen
+  new_gen=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
+    | grep current | awk '{print $1}')
+  echo -e "\n>>> New current generation: $new_gen | Previous safe generation was: $safe_gen <<<"
+
+  # ── 6. Clean up old generations (never touches current) ──────────────────
   cd "$current_dir" || return 1
-  echo -e "\nCleaning up old nix generations..."
+  echo -e "\nCleaning up old system generations (keeping latest 10)..."
+  sys_count=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
+    2>/dev/null | wc -l | tr -d ' ')
+  [ -z "$sys_count" ] && sys_count=0
 
-  sys_count=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system 2>/dev/null | wc -l | tr -d ' ')
-  if [ -z "$sys_count" ]; then sys_count=0; fi
   if [ "$sys_count" -gt 10 ]; then
-    echo "Found $sys_count system generations; keeping latest 10"
+    echo "Found $sys_count system generations — deleting oldest, keeping latest 10."
+    echo "Note: the current generation ($new_gen) is always protected."
     sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +10
   else
-    echo "Only $sys_count system generations present; skipping system --delete-generations"
+    echo "Only $sys_count system generations present — skipping cleanup."
   fi
 
+  echo -e "\nCleaning up old user generations (keeping latest 10)..."
   user_count=$(nix-env --list-generations 2>/dev/null | wc -l | tr -d ' ')
-  if [ -z "$user_count" ]; then user_count=0; fi
+  [ -z "$user_count" ] && user_count=0
+
   if [ "$user_count" -gt 10 ]; then
-    echo "Found $user_count user generations; keeping latest 10"
+    echo "Found $user_count user generations — deleting oldest, keeping latest 10."
     nix-env --delete-generations +10
   else
-    echo "Only $user_count user generations present; skipping user --delete-generations"
+    echo "Only $user_count user generations present — skipping cleanup."
   fi
 
-  read -r -p "Run full garbage collection now? This will remove unused store paths. [y/N] " answer
+  # ── 7. Garbage collection — only after confirming new gen is stable ───────
+  echo ""
+  echo "WARNING: Garbage collection removes unreferenced store paths permanently."
+  echo "Only run this after you have confirmed the new generation ($new_gen) is fully working."
+  echo "If unsure, skip and run 'sudo nix-collect-garbage -d' manually later."
+  echo ""
+  read -r -p "Run full garbage collection now? [y/N] " answer
   case "$answer" in
     [yY][eE][sS]|[yY])
       sudo nix-collect-garbage -d
       ;;
     *)
-      echo "Skipping nix-collect-garbage -d"
+      echo "Skipping garbage collection. Run it manually once you're confident the new generation is stable."
       ;;
   esac
 
-  sudo /run/current-system/bin/switch-to-configuration boot || true
-  echo -e "Update complete!"
+  echo -e "\nUpdate complete! Current generation: $new_gen"
 }
 
 validate_nix_config() {
@@ -108,7 +167,6 @@ validate_nix_config() {
 
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'
-alias t4='terminator -l 2x2 &'
 
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'

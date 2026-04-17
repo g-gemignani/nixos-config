@@ -40,23 +40,36 @@
     #   useXkbConfig = true; # use xkb.options in tty.
   };
 
-  # Enable the X11 windowing system.
+  # Enable the X11 windowing system (required base even for Wayland/Hyprland).
   services.xserver.enable = true;
 
-  # Enable the GNOME Desktop Environment.
-  services.displayManager.gdm.enable = true;
-  services.desktopManager.gnome.enable = true;
+  # Disable GNOME Desktop Environment.
+  services.displayManager.gdm.enable = false;
+  services.desktopManager.gnome.enable = false;
 
-  # Configure keymap in X11
-  # services.xserver.xkb.layout = "us";
-  # services.xserver.xkb.options = "eurosign:e,caps:escape";
+  # Enable Hyprland.
+  programs.hyprland = {
+    enable = true;
+    withUWSM = true;
+    xwayland.enable = true; # For X11 app compatibility.
+  };
+
+  # SDDM display manager with Wayland support.
+  # FIX: wayland.enable = true is required for SDDM to expose the Hyprland
+  # session and to avoid a black screen on login.
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
+
+  # Keep the greeter and Wayland session on the same keyboard layouts.
+  services.xserver.xkb.layout = "de,us";
+  services.xserver.xkb.options = "grp:ctrl_space_toggle";
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
 
-  # Enable sound.
-  # services.pulseaudio.enable = false;
-  # OR
+  # Enable sound via PipeWire.
   services.pipewire = {
     enable = true;
     audio.enable = true;
@@ -64,8 +77,43 @@
     pulse.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
+  # Enable touchpad support (enabled by default in most desktopManagers).
   services.libinput.enable = true;
+
+  fonts = {
+    packages = with pkgs; [
+      dejavu_fonts
+      fira
+      liberation_ttf
+      nerd-fonts.fira-mono
+      noto-fonts
+      noto-fonts-cjk-sans
+      noto-fonts-color-emoji
+    ];
+    fontconfig = {
+      antialias = true;
+      defaultFonts = {
+        sansSerif = [
+          "Fira Sans"
+          "Noto Sans"
+        ];
+        serif = [ "Noto Serif" ];
+        monospace = [
+          "FiraMono Nerd Font"
+          "Noto Sans Mono"
+        ];
+        emoji = [ "Noto Color Emoji" ];
+      };
+      hinting = {
+        enable = true;
+        style = "slight";
+      };
+      subpixel = {
+        lcdfilter = "default";
+        rgba = "rgb";
+      };
+    };
+  };
 
   services.ollama = {
     enable = true;
@@ -73,14 +121,32 @@
     loadModels = [ "gemma:2b" ];
   };
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  # FIX: Wayland / Hyprland environment variables.
+  # - NIXOS_OZONE_WL:        tells Electron/Chrome apps to run natively on Wayland.
+  # - WLR_NO_HARDWARE_CURSORS: fixes a black/invisible cursor bug common on many GPUs.
+  # - XDG_SESSION_TYPE:      ensures portals and apps correctly detect the session.
+  # - XDG_CURRENT_DESKTOP:   needed by xdg-desktop-portal-hyprland.
+  environment.sessionVariables = {
+    NIXOS_OZONE_WL = "1";
+    WLR_NO_HARDWARE_CURSORS = "1";
+    XDG_SESSION_TYPE = "wayland";
+    XDG_CURRENT_DESKTOP = "Hyprland";
+  };
+
+  # xdg-desktop-portal is required for screen sharing, file pickers, etc. under Wayland.
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
+  };
+
+  # Define a user account. Don't forget to set a password with 'passwd'.
   users.users = {
     "${username}" = {
       isNormalUser = true;
       extraGroups = [
         "wheel"
         "networkmanager"
-      ]; # Enable ‘sudo’ for the user.
+      ]; # Enable 'sudo' for the user.
       packages = with pkgs; [
         tree
       ];
@@ -89,6 +155,7 @@
   };
 
   security.sudo.enable = true;
+  security.pam.services.hyprlock = { };
 
   # List packages installed in system profile.
   # You can use https://search.nixos.org/ to find more packages (and options).
@@ -108,9 +175,9 @@
     nixfmt
     flameshot
     nix-direnv
-    terminator
+    alacritty
     # gaming
-    lutris # set wine-ge-proton as runnner for Battle.net
+    lutris # set wine-ge-proton as runner for Battle.net
     wine
     winetricks
     cabextract
@@ -145,6 +212,13 @@
     # office
     onlyoffice-desktopeditors
     xournalpp
+    # Wayland utilities
+    xdg-desktop-portal-hyprland
+    xdg-utils
+    wl-clipboard
+    waybar
+    dunst
+    wofi
   ];
 
   hardware.graphics = {
@@ -226,8 +300,6 @@
       surfshark-openvpn-us = mkSurfsharkService "US" ../vpn/us-nyc.prod.surfshark.com_udp.ovpn;
     };
 
-  # (surfshark user unit declared above)
-
   # List services that you want to enable:
 
   # Enable the OpenSSH daemon.
@@ -238,11 +310,6 @@
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   networking.firewall.enable = false;
-
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  # system.copySystemConfiguration = true;
 
   # This option defines the first version of NixOS you have installed on this particular machine,
   # and is used to maintain compatibility with application data (e.g. databases) created on older NixOS versions.
