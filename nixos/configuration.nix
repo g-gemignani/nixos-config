@@ -181,6 +181,8 @@
     nix-direnv
     alacritty
     dnsutils
+    rar
+    unar
     # gaming
     lutris # set wine-ge-proton as runner for Battle.net
     wine
