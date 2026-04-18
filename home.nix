@@ -54,5 +54,12 @@
         SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh";
       })
     ];
+    # possible themes:
+    # - "dank-material"
+    # - "midnight"
+    # - "simp1e-late-night"
+    # - "xnm-macchiato"
+
+    custom.hyprland.theme = "dank-material";
   };
 }

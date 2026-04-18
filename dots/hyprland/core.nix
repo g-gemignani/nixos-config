@@ -54,6 +54,24 @@ in
 {
   fonts.fontconfig.enable = true;
 
+  systemd.user.services.hyprland-wallpaper = {
+    Unit = {
+      Description = "Hyprland wallpaper";
+    };
+
+    Service = {
+      ExecStart = "${lib.getExe pkgs.swaybg} -i ${theme.wallpaper} -m fill";
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+  };
+
+  home.activation.restartHyprlandWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if systemctl --user show-environment | grep -q '^WAYLAND_DISPLAY='; then
+      systemctl --user restart hyprland-wallpaper.service || systemctl --user start hyprland-wallpaper.service
+    fi
+  '';
+
   home.packages =
     theme.packages
     ++ (with pkgs; [
@@ -160,7 +178,7 @@ in
 
       exec-once = [
         "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-        "${lib.getExe pkgs.swaybg} -i ${theme.wallpaper} -m fill"
+        "systemctl --user restart hyprland-wallpaper.service || systemctl --user start hyprland-wallpaper.service"
       ];
 
       env = [
@@ -191,6 +209,11 @@ in
       misc = {
         disable_hyprland_logo = true;
         disable_splash_rendering = true;
+        on_focus_under_fullscreen = 1;
+      };
+
+      binds = {
+        movefocus_cycles_fullscreen = true;
       };
 
       bind = [
@@ -198,7 +221,7 @@ in
         "$mod,B,exec,google-chrome-stable"
         "$mod,N,exec,${openFileManager}"
         "$mod,SPACE,exec,wofi --show drun"
-        "$mod,TAB,exec,${hyprctl} dispatch cyclenext visible && ${hyprctl} dispatch bringactivetotop"
+        "$mod,TAB,cyclenext,visible"
         "$mod,BackSpace,exec,${lib.getExe config.programs.hyprlock.package}"
         "$mod,L,exec,loginctl lock-session && systemctl suspend"
         "$mod,Q,killactive"

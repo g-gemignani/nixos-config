@@ -1,4 +1,13 @@
-{ ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+
+let
+  theme = import (./hyprland/themes + "/${config.custom.hyprland.theme}.nix") { inherit lib pkgs; };
+in
 {
   xdg.mimeApps = {
     associations.added = {
@@ -11,7 +20,7 @@
 
   programs.alacritty = {
     enable = true;
-    settings = {
+    settings = lib.recursiveUpdate {
       keyboard.bindings = [
         {
           key = "N";
@@ -19,19 +28,12 @@
           action = "SpawnNewInstance";
         }
       ];
-      font = {
-        size = 10;
-        normal = {
-          family = "FiraMono Nerd Font";
-          style = "Medium";
-        };
-      };
       window = {
         padding = {
           x = 24;
           y = 26;
         };
       };
-    };
+    } theme.alacrittySettings;
   };
 }
