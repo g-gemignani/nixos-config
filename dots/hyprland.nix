@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 
@@ -25,6 +26,7 @@ in
   config = import ./hyprland/core.nix {
     inherit
       config
+      inputs
       lib
       pkgs
       theme

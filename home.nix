@@ -2,12 +2,16 @@
   pkgs,
   home-manager,
   lib,
+  inputs,
   username,
   ...
 }:
 
 {
   home-manager.backupFileExtension = "backup";
+  home-manager.extraSpecialArgs = {
+    inherit inputs;
+  };
 
   home-manager.users.${username} = {
     nixpkgs.config.allowUnfree = true;
@@ -35,6 +39,7 @@
     };
 
     imports = [
+      inputs.hyprshell.homeModules.hyprshell
       ./dots/alacritty.nix
       ./dots/hyprland.nix
       ./dots/nvim.nix

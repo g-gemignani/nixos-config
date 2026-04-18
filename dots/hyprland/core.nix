@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   theme,
@@ -199,6 +200,20 @@ in
     settings = theme.hyprlockSettings;
   };
 
+  programs.hyprshell = {
+    enable = true;
+    package = pkgs.hyprshell;
+    settings.windows = {
+      enable = true;
+      switch = {
+        enable = true;
+        key = "Tab";
+        modifier = "super";
+        filter_by = [ ];
+      };
+    };
+  };
+
   services.hypridle = {
     enable = true;
     settings =
@@ -311,7 +326,6 @@ in
         "$mod,comma,exec,${launchGnomeControlCenter}"
         "$mod,N,exec,${openFileManager}"
         "$mod,SPACE,exec,wofi --show drun"
-        "$mod,TAB,cyclenext,visible"
         "$mod,BackSpace,exec,${lib.getExe config.programs.hyprlock.package}"
         "$mod,L,exec,loginctl lock-session && systemctl suspend"
         "$mod,Q,killactive"

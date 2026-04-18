@@ -24,6 +24,7 @@
   # Pick only one of the below networking options.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   networking.networkmanager.enable = true; # Easiest to use and most distros use this by default.
+  networking.networkmanager.dns = "systemd-resolved";
 
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
@@ -76,6 +77,8 @@
     alsa.enable = true;
     pulse.enable = true;
   };
+
+  services.resolved.enable = true;
 
   # Enable touchpad support (enabled by default in most desktopManagers).
   services.libinput.enable = true;
@@ -177,6 +180,7 @@
     flameshot
     nix-direnv
     alacritty
+    dnsutils
     # gaming
     lutris # set wine-ge-proton as runner for Battle.net
     wine
@@ -269,9 +273,11 @@
 
   systemd.services =
     let
+      updateSystemdResolved = "${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved";
       vpnDependencies = [
         "network-online.target"
         "sops-nix.service"
+        "systemd-resolved.service"
       ];
 
       mkSurfsharkService = region: ovpnFile: {
@@ -282,7 +288,7 @@
         serviceConfig = {
           AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
           CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-          ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${ovpnFile} --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
+          ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${ovpnFile} --auth-user-pass ${config.sops.secrets.vpn_auth.path} --script-security 2 --up ${updateSystemdResolved} --up-restart --down ${updateSystemdResolved} --down-pre";
           LockPersonality = true;
           MemoryDenyWriteExecute = true;
           NoNewPrivileges = true;

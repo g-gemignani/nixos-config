@@ -17,6 +17,8 @@
     # Add the nix-search-cli flake input
     nix-search-cli.url = "github:peterldowns/nix-search-cli";
 
+    hyprshell.url = "github:H3rmt/hyprshell/hyprshell-release";
+
     sops-nix.url = "github:Mic92/sops-nix";
   };
 
@@ -26,6 +28,7 @@
       nixpkgs,
       sops-nix,
       nix-search-cli,
+      hyprshell,
       home-manager,
       ...
     }@inputs:
@@ -66,6 +69,7 @@
 
         # Optional: expose the package and pass username to modules
         specialArgs = {
+          inherit inputs;
           inherit nix-search-cli;
           username = username;
         };
