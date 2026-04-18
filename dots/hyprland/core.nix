@@ -22,9 +22,42 @@ let
   brightnessctl = lib.getExe pkgs.brightnessctl;
   flameshot = lib.getExe pkgs.flameshot;
   hyprctl = lib.getExe' config.wayland.windowManager.hyprland.package "hyprctl";
+  pgrep = lib.getExe' pkgs.procps "pgrep";
+  pkill = lib.getExe' pkgs.procps "pkill";
+  wlogoutExe = lib.getExe pkgs.wlogout;
   thunarExe = lib.getExe pkgs.thunar;
   pactl = lib.getExe' pkgs.pulseaudio "pactl";
   xdgOpen = lib.getExe' pkgs.xdg-utils "xdg-open";
+  launchGnomeControlCenter = pkgs.writeShellScript "launch-gnome-control-center" ''
+    set -eu
+
+    export XDG_CURRENT_DESKTOP=GNOME
+    export XDG_SESSION_DESKTOP=GNOME
+
+    exec ${lib.getExe pkgs.gnome-control-center}
+  '';
+  logoutSession = pkgs.writeShellScript "logout-session" ''
+    set -eu
+
+    if command -v uwsm >/dev/null 2>&1; then
+      exec uwsm stop
+    fi
+
+    if [ -n "''${XDG_SESSION_ID-}" ]; then
+      exec loginctl terminate-session "$XDG_SESSION_ID"
+    fi
+
+    exec ${hyprctl} dispatch exit
+  '';
+  togglePowerMenu = pkgs.writeShellScriptBin "toggle-power-menu" ''
+    set -eu
+
+    if ${pgrep} -x wlogout >/dev/null 2>&1; then
+      exec ${pkill} -x wlogout
+    fi
+
+    exec ${wlogoutExe} --buttons-per-row 3
+  '';
   openFileManager = pkgs.writeShellScript "open-file-manager" ''
     set -eu
 
@@ -76,9 +109,12 @@ in
     theme.packages
     ++ (with pkgs; [
       grim
+      polkit_gnome
       pavucontrol
       swaybg
       thunar
+      togglePowerMenu
+      pkgs.wlogout
     ]);
 
   xdg.configFile."flameshot/flameshot.ini".text = ''
@@ -86,6 +122,57 @@ in
     disabledGrimWarning=true
     useGrimAdapter=true
   '';
+
+  xdg.dataFile."applications/settings.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Version=1.0
+    Name=Settings
+    Comment=System settings
+    Exec=${launchGnomeControlCenter}
+    Icon=org.gnome.Settings
+    Terminal=false
+    Categories=Settings;DesktopSettings;X-Preferences;
+  '';
+
+  xdg.configFile."wlogout/layout".text =
+    let
+      entries = [
+        {
+          label = "lock";
+          action = "loginctl lock-session";
+          text = "Lock";
+          keybind = "l";
+        }
+        {
+          label = "sleep";
+          action = "systemctl suspend";
+          text = "Sleep";
+          keybind = "s";
+        }
+        {
+          label = "logout";
+          action = "${logoutSession}";
+          text = "Logout";
+          keybind = "e";
+        }
+        {
+          label = "reboot";
+          action = "systemctl reboot";
+          text = "Reboot";
+          keybind = "r";
+        }
+        {
+          label = "shutdown";
+          action = "systemctl poweroff";
+          text = "Shutdown";
+          keybind = "p";
+        }
+      ];
+    in
+    lib.concatStringsSep "\n" (map builtins.toJSON entries);
+
+  xdg.configFile."wlogout/style.css".text = theme.wlogoutStyle;
 
   home.sessionVariables = {
     MOZ_ENABLE_WAYLAND = "1";
@@ -178,6 +265,8 @@ in
 
       exec-once = [
         "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
+        "${lib.getExe' pkgs.polkit_gnome "polkit-gnome-authentication-agent-1"}"
+        "${lib.getExe pkgs.networkmanagerapplet}"
         "systemctl --user restart hyprland-wallpaper.service || systemctl --user start hyprland-wallpaper.service"
       ];
 
@@ -219,6 +308,7 @@ in
       bind = [
         "$mod,Return,exec,${terminal}"
         "$mod,B,exec,google-chrome-stable"
+        "$mod,comma,exec,${launchGnomeControlCenter}"
         "$mod,N,exec,${openFileManager}"
         "$mod,SPACE,exec,wofi --show drun"
         "$mod,TAB,cyclenext,visible"

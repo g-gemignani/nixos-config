@@ -289,8 +289,8 @@ in
 
   waybarSettings = {
     mainBar = {
-      exclusive = false;
-      height = 40;
+      exclusive = true;
+      height = 43;
       layer = "top";
       margin = "15 15 0 15";
       position = "top";
@@ -305,6 +305,7 @@ in
         "cpu"
         "memory"
         "tray"
+        "custom/power"
       ];
 
       "hyprland/workspaces" = {
@@ -353,8 +354,49 @@ in
       tray = {
         spacing = 10;
       };
+
+      "custom/power" = {
+        format = "PWR";
+        on-click = "toggle-power-menu";
+        tooltip = false;
+      };
     };
   };
+
+  wlogoutStyle = ''
+    window {
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    button {
+      background: ${surfaceOverlay};
+      border: 1px solid ${colors.border};
+      border-radius: 18px;
+      box-shadow: none;
+      color: ${colors.text};
+      font-family: ${sansFont}, ${monoFont};
+      font-size: 18px;
+      margin: 14px;
+      min-height: 96px;
+      min-width: 180px;
+      padding: 18px 24px;
+    }
+
+    button:focus,
+    button:hover {
+      background: ${colors.surfaceBright};
+      border-color: ${colors.primary};
+      color: ${colors.text};
+    }
+
+    #shutdown,
+    #reboot,
+    #logout,
+    #sleep,
+    #lock {
+      background-image: none;
+    }
+  '';
 
   waybarStyle = ''
     * {
@@ -386,6 +428,7 @@ in
     #cpu,
     #memory,
     #tray,
+    #custom-power,
     #window {
       color: ${colors.text};
       margin: 6px 4px;
@@ -408,6 +451,7 @@ in
     #network:hover,
     #cpu:hover,
     #memory:hover,
+    #custom-power:hover,
     #clock:hover {
       background: ${colors.surfaceBright};
       color: ${colors.text};

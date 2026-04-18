@@ -154,6 +154,7 @@
     };
   };
 
+  security.polkit.enable = true;
   security.sudo.enable = true;
   security.pam.services.hyprlock = { };
 
@@ -201,7 +202,13 @@
     home-manager
     networkmanager-openvpn
     networkmanager
+    networkmanagerapplet
     transmission_4-qt
+    gnome-control-center
+    gnome-calculator
+    gnome-settings-daemon
+    wdisplays
+    blueman
     # sops for encrypting/decrypting secrets stored in the repo
     sops
     gawk
