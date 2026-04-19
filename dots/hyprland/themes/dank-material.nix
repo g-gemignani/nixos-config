@@ -2,18 +2,6 @@
 
 let
   mkTheme = import ./mk-theme.nix { inherit lib pkgs; };
-  wallpaperImage =
-    pkgs.runCommandLocal "hyprland-wallpaper-dank-material.png"
-      {
-        nativeBuildInputs = [ pkgs.imagemagick ];
-      }
-      ''
-        magick -size 2560x1440 gradient:'#141218-#211f24' \
-          -fill 'rgba(208,188,255,0.20)' -draw 'circle 520,180 520,-180' \
-          -fill 'rgba(138,180,248,0.12)' -draw 'circle 2120,1200 2120,840' \
-          -fill 'rgba(230,224,233,0.05)' -draw 'rectangle 0,0 2559,1439' \
-          "$out"
-      '';
 in
 mkTheme {
   name = "dank-material";
@@ -30,7 +18,7 @@ mkTheme {
   sansFont = "Inter";
   monoFont = "FiraCode Nerd Font";
   surfaceOverlay = "rgba(33, 31, 36, 0.84)";
-  wallpaper = wallpaperImage;
+  wallpaper = ../wallpapers/dank-material-rain-anime.jpg;
   terminalPalette = {
     normal = {
       black = "#211f24";

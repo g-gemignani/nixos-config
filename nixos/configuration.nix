@@ -194,6 +194,7 @@
     wineWow64Packages.staging
     dxvk
     gamemode
+    steam
     # coding
     python3
     uv
