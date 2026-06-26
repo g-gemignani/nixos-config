@@ -44,23 +44,16 @@
   # Enable the X11 windowing system (required base even for Wayland/Hyprland).
   services.xserver.enable = true;
 
-  # Disable GNOME Desktop Environment.
-  services.displayManager.gdm.enable = false;
-  services.desktopManager.gnome.enable = false;
+  # Expose both GNOME and Hyprland in the greeter.
+  services.displayManager.gdm.enable = true;
+  services.displayManager.defaultSession = "gnome";
+  services.desktopManager.gnome.enable = true;
 
   # Enable Hyprland.
   programs.hyprland = {
     enable = true;
     withUWSM = true;
     xwayland.enable = true; # For X11 app compatibility.
-  };
-
-  # SDDM display manager with Wayland support.
-  # FIX: wayland.enable = true is required for SDDM to expose the Hyprland
-  # session and to avoid a black screen on login.
-  services.displayManager.sddm = {
-    enable = true;
-    wayland.enable = true;
   };
 
   # Keep the greeter and Wayland session on the same keyboard layouts.
@@ -124,22 +117,18 @@
     loadModels = [ "gemma:2b" ];
   };
 
-  # FIX: Wayland / Hyprland environment variables.
-  # - NIXOS_OZONE_WL:        tells Electron/Chrome apps to run natively on Wayland.
-  # - WLR_NO_HARDWARE_CURSORS: fixes a black/invisible cursor bug common on many GPUs.
-  # - XDG_SESSION_TYPE:      ensures portals and apps correctly detect the session.
-  # - XDG_CURRENT_DESKTOP:   needed by xdg-desktop-portal-hyprland.
+  # Keep generic Wayland app support enabled across desktop sessions.
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
-    WLR_NO_HARDWARE_CURSORS = "1";
-    XDG_SESSION_TYPE = "wayland";
-    XDG_CURRENT_DESKTOP = "Hyprland";
   };
 
-  # xdg-desktop-portal is required for screen sharing, file pickers, etc. under Wayland.
+  # Portals are required for screen sharing, file pickers, and browser integration.
   xdg.portal = {
     enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gtk
+      xdg-desktop-portal-hyprland
+    ];
   };
 
   # Define a user account. Don't forget to set a password with 'passwd'.

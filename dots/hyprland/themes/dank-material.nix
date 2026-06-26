@@ -11,8 +11,8 @@ mkTheme {
     surfaceAlt = "#2b292f";
     surfaceBright = "#36343a";
     border = "#948f99";
-    text = "#e6e0e9";
-    muted = "#cac4cf";
+    text = "#d4d4d4";
+    muted = "#808080";
     primary = "#d0bcff";
   };
   sansFont = "Inter";
@@ -21,24 +21,24 @@ mkTheme {
   wallpaper = ../wallpapers/dank-material-rain-anime.jpg;
   terminalPalette = {
     normal = {
-      black = "#211f24";
-      red = "#cf6679";
-      green = "#86d993";
-      yellow = "#e7c76e";
-      blue = "#8ab4f8";
-      magenta = "#d0bcff";
-      cyan = "#89dceb";
-      white = "#e6e0e9";
+      black = "#1e1e1e";
+      red = "#cd3131";
+      green = "#0dbc79";
+      yellow = "#c19c00";
+      blue = "#2472c8";
+      magenta = "#bc3fbc";
+      cyan = "#11a8cd";
+      white = "#d4d4d4";
     };
     bright = {
-      black = "#4a4450";
-      red = "#f28b9b";
-      green = "#a8efb1";
-      yellow = "#f3db8c";
-      blue = "#a6c8ff";
-      magenta = "#e5d7ff";
-      cyan = "#a9eeff";
-      white = "#ffffff";
+      black = "#666666";
+      red = "#f14c4c";
+      green = "#23d18b";
+      yellow = "#f5f543";
+      blue = "#3b8eea";
+      magenta = "#d670d6";
+      cyan = "#29b8db";
+      white = "#e5e5e5";
     };
   };
   extraPackages = with pkgs; [

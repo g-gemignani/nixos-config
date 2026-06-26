@@ -3,14 +3,14 @@
 
   inputs = {
     # Add nixpkgs and other necessary inputs
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     flake-compat = {
       url = "github:NixOS/flake-compat";
       flake = false;
     };
 
-    home-manager.url = "github:nix-community/home-manager/master";
+    home-manager.url = "github:nix-community/home-manager/release-26.05";
     # Make sure home-manager uses the same nixpkgs
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 

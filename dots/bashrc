@@ -15,7 +15,33 @@ if [ -z "${NIX_DIR:-}" ]; then
 fi
 
 update_all() {
-  local current_dir sys_count user_count answer safe_gen
+  local current_dir sys_count user_count answer safe_gen do_upgrade
+  local host_name active_dm target_gdm target_sddm target_default_session use_boot_workflow
+
+  do_upgrade=0
+  use_boot_workflow=0
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --upgrade)
+        do_upgrade=1
+        ;;
+      -h|--help)
+        cat <<'EOF'
+Usage: update_all [--upgrade]
+
+  --upgrade  Run `nix flake update` before rebuilding.
+EOF
+        return 0
+        ;;
+      *)
+        echo "Unknown option: $1"
+        echo "Usage: update_all [--upgrade]"
+        return 1
+        ;;
+    esac
+    shift
+  done
 
   current_dir=$(pwd)
 
@@ -29,12 +55,29 @@ update_all() {
     | grep current | awk '{print $1}')
   echo -e "\n>>> Safe/current generation: $safe_gen (will never be deleted) <<<\n"
 
-  # ── 1. Update flake ───────────────────────────────────────────────────────
+  # ── 1. Optionally update flake ───────────────────────────────────────────
   cd "$NIX_DIR" || return 1
-  echo -e "\nUpdating Nix flake..."
-  if ! nix flake update; then
-    echo "nix flake update failed"
-    cd "$current_dir"; return 1
+  if [ "$do_upgrade" -eq 1 ]; then
+    echo -e "\nUpdating Nix flake..."
+    if ! nix flake update; then
+      echo "nix flake update failed"
+      cd "$current_dir"; return 1
+    fi
+  else
+    echo -e "\nSkipping flake update (pass --upgrade to refresh flake.lock)."
+  fi
+
+  host_name=$(hostname)
+  active_dm=$(systemctl show -P ExecStart display-manager.service 2>/dev/null || true)
+  target_gdm=$(nix eval --json ".#nixosConfigurations.${host_name}.config.services.displayManager.gdm.enable" 2>/dev/null || echo false)
+  target_sddm=$(nix eval --json ".#nixosConfigurations.${host_name}.config.services.displayManager.sddm.enable" 2>/dev/null || echo false)
+  target_default_session=$(nix eval --raw ".#nixosConfigurations.${host_name}.config.services.displayManager.defaultSession" 2>/dev/null || echo "")
+
+  if [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
+    if [[ "$active_dm" == *"/sddm"* && "$target_gdm" == "true" ]] || \
+       [[ "$active_dm" == *"/gdm"* && "$target_sddm" == "true" ]]; then
+      use_boot_workflow=1
+    fi
   fi
 
   # ── 2. Copy config to /etc/nixos ─────────────────────────────────────────
@@ -44,7 +87,44 @@ update_all() {
     cd "$current_dir"; return 1
   fi
 
-  # ── 3. Build and TEST (does NOT touch bootloader) ────────────────────────
+  # ── 3. Build using the safest activation strategy for the current session ─
+  if [ "$use_boot_workflow" -eq 1 ]; then
+    echo -e "\nBuilding new configuration without live activation..."
+    echo "Detected a display-manager change while running inside a graphical session."
+    echo "Skipping 'nixos-rebuild test' to avoid tearing down the current desktop."
+    if [ -n "$target_default_session" ]; then
+      echo "Target default session: $target_default_session"
+    fi
+    if ! sudo nixos-rebuild build --show-trace; then
+      echo ""
+      echo "nixos-rebuild build failed. Your running system is still on generation $safe_gen."
+      cd "$current_dir"; return 1
+    fi
+
+    echo ""
+    echo "Build succeeded. The new graphical stack was not activated in this session."
+    read -r -p "Install this as the next boot generation instead? [y/N] " answer
+    case "$answer" in
+      [yY][eE][sS]|[yY])
+        if ! sudo nixos-rebuild boot --show-trace; then
+          echo "nixos-rebuild boot failed. Rebooting will keep generation $safe_gen."
+          cd "$current_dir"; return 1
+        fi
+        echo ""
+        echo "The new generation will be used on next reboot."
+        echo "Reboot to test the new display-manager/session stack safely."
+        cd "$current_dir"
+        return 0
+        ;;
+      *)
+        echo ""
+        echo "Build completed, but the current boot generation remains unchanged."
+        cd "$current_dir"
+        return 0
+        ;;
+    esac
+  fi
+
   echo -e "\nBuilding and testing new configuration..."
   echo "NOTE: If this fails or the desktop breaks, just reboot — the previous generation is safe."
   if ! sudo nixos-rebuild test --show-trace; then
@@ -194,6 +274,10 @@ forgit() {
   done
 }
 
+suspend_sleep()
+{
+  systemd-inhibit --what=idle:sleep --why="Long-running session" bash
+}
 
 recursive_replace()
 {

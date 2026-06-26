@@ -9,17 +9,7 @@
 
 let
   terminal = lib.getExe config.programs.alacritty.package;
-  hyprbars = pkgs.hyprlandPlugins.hyprbars.overrideAttrs (_: {
-    version = "unstable-2026-04-18";
-    src =
-      pkgs.fetchFromGitHub {
-        owner = "hyprwm";
-        repo = "hyprland-plugins";
-        rev = "6059aca0cc623d8d896b02842606036c0954ba88";
-        sha256 = "1j0ack8s7rfvalhpdp1qm0jfg7cf3axyxyqhgrby1s5w8i4isz9m";
-      }
-      + "/hyprbars";
-  });
+  hyprbars = pkgs.hyprlandPlugins.hyprbars;
   brightnessctl = lib.getExe pkgs.brightnessctl;
   flameshot = lib.getExe pkgs.flameshot;
   hyprctl = lib.getExe' config.wayland.windowManager.hyprland.package "hyprctl";
@@ -208,7 +198,7 @@ in
       switch = {
         enable = true;
         key = "Tab";
-        modifier = "super";
+        modifier = "alt";
         filter_by = [ ];
       };
     };
@@ -266,11 +256,12 @@ in
 
   wayland.windowManager.hyprland = {
     enable = true;
+    configType = "hyprlang";
     plugins = [ hyprbars ];
     systemd.enable = false;
     xwayland.enable = true;
     settings = theme.hyprlandSettings // {
-      "$mod" = "SUPER";
+      "$mod" = "ALT";
 
       monitor = [
         "HDMI-A-2,preferred,0x0,1"
@@ -289,6 +280,7 @@ in
         "XCURSOR_SIZE,${toString theme.pointerCursor.size}"
         "XDG_CURRENT_DESKTOP,Hyprland"
         "NIXOS_OZONE_WL,1"
+        "WLR_NO_HARDWARE_CURSORS,1"
       ];
 
       xwayland = {
