@@ -190,20 +190,6 @@ in
     settings = theme.hyprlockSettings;
   };
 
-  programs.hyprshell = {
-    enable = true;
-    package = pkgs.hyprshell;
-    settings.windows = {
-      enable = true;
-      switch = {
-        enable = true;
-        key = "Tab";
-        modifier = "alt";
-        filter_by = [ ];
-      };
-    };
-  };
-
   services.hypridle = {
     enable = true;
     settings =
@@ -316,6 +302,10 @@ in
         "$mod,B,exec,google-chrome-stable"
         "$mod,comma,exec,${launchGnomeControlCenter}"
         "$mod,N,exec,${openFileManager}"
+        "$mod,TAB,cyclenext"
+        "$mod,TAB,bringactivetotop"
+        "$mod SHIFT,TAB,cyclenext,prev"
+        "$mod SHIFT,TAB,bringactivetotop"
         "$mod,SPACE,exec,wofi --show drun"
         "$mod,BackSpace,exec,${lib.getExe config.programs.hyprlock.package}"
         "$mod,L,exec,loginctl lock-session && systemctl suspend"
