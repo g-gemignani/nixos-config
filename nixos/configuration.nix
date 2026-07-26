@@ -128,6 +128,7 @@
     extraPortals = with pkgs; [
       xdg-desktop-portal-gtk
       xdg-desktop-portal-hyprland
+      xdg-desktop-portal-gnome
     ];
   };
 
@@ -192,7 +193,8 @@
     gcc
     pkg-config
     ollama
-    github-copilot-cli
+    code-cursor
+    claude-code
     # VPN support: OpenVPN + NetworkManager plugins
     openvpn
     home-manager

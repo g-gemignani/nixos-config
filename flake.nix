@@ -20,6 +20,11 @@
     hyprshell.url = "github:H3rmt/hyprshell/hyprshell-release";
 
     sops-nix.url = "github:Mic92/sops-nix";
+
+    # Always-fresh Claude Code, rebuilt hourly from Anthropic's releases.
+    # Overrides nixpkgs' (lagging) claude-code via overlays.default below.
+    claude-code.url = "github:sadjow/claude-code-nix";
+    claude-code.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -59,6 +64,8 @@
             { config, ... }:
             {
               nixpkgs.config.allowUnfree = true;
+              # Replace nixpkgs' claude-code with the hourly-updated flake package.
+              nixpkgs.overlays = [ inputs.claude-code.overlays.default ];
             }
           )
           ./nixos/configuration.nix
