@@ -248,9 +248,15 @@ validate_nix_config() {
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'
 
+alias Claudio='claude --remote-control --dangerously-skip-permissions --chrome'
+
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
-alias format-bank-excels='cd $CODING_DIR/python && python3 -m unified_bank_statement -i ~/Downloads/ --use-mappings --history --auto'
+# Mappings are applied by default now (--use-mappings is gone). A Bilancio*.xlsx
+# in ~/Downloads is picked up automatically and merged into the saved mappings.
+# Runs in a subshell so the cd does not leak into the current shell.
+alias format-bank-excels='(cd $CODING_DIR/python && python3 -m unified_bank_statement -i ~/Downloads/ --history --auto)'
+alias format-bank-excels-preview='(cd $CODING_DIR/python && python3 -m unified_bank_statement -i ~/Downloads/ --history --auto --dry-run)'
 
 # Point SSH to GPG
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
