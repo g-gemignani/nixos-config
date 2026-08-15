@@ -78,6 +78,14 @@ in
 {
   fonts.fontconfig.enable = true;
 
+  # Every Nix store dir has mtime 0, and ~/.nix-profile/share/fonts keeps the
+  # same path across generations. So fontconfig thinks its cache is still valid
+  # and never rescans. Drop a font package and it keeps handing out the dead
+  # store path, which makes Pango draw boxes instead of glyphs. Force a rescan.
+  home.activation.rebuildFontCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run ${lib.getExe' pkgs.fontconfig "fc-cache"} -f
+  '';
+
   systemd.user.services.hyprland-wallpaper = {
     Unit = {
       Description = "Hyprland wallpaper";
