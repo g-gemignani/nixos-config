@@ -22,7 +22,6 @@
     '';
 
     home.packages = with pkgs; [
-      alejandra
       wl-clipboard
       black
       isort

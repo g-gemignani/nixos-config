@@ -46,9 +46,12 @@
         my-nix-search = pkgs.nix-search-cli;
       };
 
+      # One formatter, so `nix fmt` and the editor agree. pkgs.nixfmt is the
+      # RFC-style build, which is what every file in this repo already uses.
+      formatter.x86_64-linux = pkgs.nixfmt;
+
       devShells.x86_64-linux.default = pkgs.mkShell {
         packages = with pkgs; [
-          alejandra
           bashInteractive
           git
           nixd
