@@ -14,9 +14,6 @@
     # Make sure home-manager uses the same nixpkgs
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    # Add the nix-search-cli flake input
-    nix-search-cli.url = "github:peterldowns/nix-search-cli";
-
     hyprshell.url = "github:H3rmt/hyprshell/hyprshell-release";
 
     sops-nix.url = "github:Mic92/sops-nix";
@@ -32,7 +29,6 @@
       self,
       nixpkgs,
       sops-nix,
-      nix-search-cli,
       hyprshell,
       home-manager,
       ...
@@ -80,7 +76,6 @@
         # Optional: expose the package and pass username to modules
         specialArgs = {
           inherit inputs;
-          inherit nix-search-cli;
           username = username;
         };
       };

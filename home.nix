@@ -7,6 +7,28 @@
   ...
 }:
 
+let
+  regions = import ./vpn/regions.nix;
+
+  # Generated from the same list that builds the systemd units, so a new
+  # region never leaves the shell helpers behind.
+  vpnHelpers = lib.concatStrings (
+    lib.mapAttrsToList (key: _region: ''
+
+      vpn-start-${key}() {
+        sudo systemctl start surfshark-openvpn-${key}.service
+      }
+
+      vpn-stop-${key}() {
+        sudo systemctl stop surfshark-openvpn-${key}.service
+      }
+
+      vpn-status-${key}() {
+        sudo systemctl status surfshark-openvpn-${key}.service
+      }
+    '') regions
+  );
+in
 {
   home-manager.backupFileExtension = "backup";
   home-manager.extraSpecialArgs = {
@@ -32,7 +54,7 @@
 
     # Dotfiles
     home.file = {
-      ".bashrc".text = builtins.readFile ./dots/bashrc;
+      ".bashrc".text = builtins.readFile ./dots/bashrc + vpnHelpers;
       ".gitconfig".text = builtins.readFile ./dots/gitconfig;
     };
 

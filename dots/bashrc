@@ -325,27 +325,3 @@ recursive_replace()
   grep -rFlZ --exclude-dir='.git' -- "$search" "$scope" |
     xargs -0r env SEARCH="$search" REPLACE="$replace" perl -0pi -e 's/\Q$ENV{SEARCH}\E/$ENV{REPLACE}/g'
 }
-
-vpn-start-it() {
-  sudo systemctl start surfshark-openvpn-it.service
-}
-
-vpn-stop-it() {
-  sudo systemctl stop surfshark-openvpn-it.service
-}
-
-vpn-status-it() {
-  sudo systemctl status surfshark-openvpn-it.service
-}
-
-vpn-start-us() {
-  sudo systemctl start surfshark-openvpn-us.service
-}
-
-vpn-stop-us() {
-  sudo systemctl stop surfshark-openvpn-us.service
-}
-
-vpn-status-us() {
-  sudo systemctl status surfshark-openvpn-us.service
-}
