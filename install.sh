@@ -64,4 +64,64 @@ fi
 echo ""
 echo "GPG Restoration Complete!"
 echo "If git fetch fails, remember to check if your SSH_AUTH_SOCK is exported in your shell config."
-echo "Run 'update-all' when you are ready to rebuild the system."
+
+# 8. First system build
+# The system is built straight from this repo. Nothing is copied to /etc/nixos.
+NIX_DIR="${NIX_DIR:-$HOME/nixos-config}"
+
+echo ""
+echo "--- NixOS rebuild ---"
+
+if [ ! -f "$NIX_DIR/flake.nix" ]; then
+    echo "No flake.nix under $NIX_DIR."
+    echo "Clone the config there, then run:"
+    echo "  sudo nixos-rebuild switch --flake \"$NIX_DIR#<host>\""
+    exit 0
+fi
+
+# A flake build only reads git-tracked files, so a fresh clone is required.
+if ! git -C "$NIX_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "Warning: $NIX_DIR is not a git repository."
+    echo "A flake build only reads git-tracked files, so this will not work."
+    echo "Clone the config with git instead of copying it."
+    exit 1
+fi
+
+# Pick the config that matches this host, or the only one the flake defines.
+HOST_NAME="$(hostname)"
+FLAKE_HOST="$(
+    nix eval --raw "${NIX_DIR}#nixosConfigurations" --apply \
+      "cfgs:
+         let names = builtins.attrNames cfgs;
+         in if builtins.elem \"${HOST_NAME}\" names then \"${HOST_NAME}\"
+            else if builtins.length names == 1 then builtins.head names
+            else \"\"" 2>/dev/null || true
+)"
+
+if [ -z "$FLAKE_HOST" ]; then
+    echo "Could not work out which config to build for host '$HOST_NAME'."
+    echo "Pick one by hand:"
+    echo "  sudo nixos-rebuild switch --flake \"$NIX_DIR#<host>\""
+    exit 1
+fi
+
+echo "Building configuration '$FLAKE_HOST' from $NIX_DIR."
+echo "Nothing is copied to /etc/nixos."
+read -r -p "Build and switch now? [y/N] " answer
+case "$answer" in
+    [yY][eE][sS]|[yY])
+        if ! sudo nixos-rebuild switch --flake "${NIX_DIR}#${FLAKE_HOST}" --show-trace; then
+            echo ""
+            echo "The rebuild failed. Your running system is unchanged."
+            exit 1
+        fi
+        echo ""
+        echo "Done. Open a new shell to pick up the 'update-all' helper."
+        ;;
+    *)
+        echo ""
+        echo "Skipped. Run this when you are ready:"
+        echo "  sudo nixos-rebuild switch --flake \"${NIX_DIR}#${FLAKE_HOST}\""
+        echo "After the first rebuild, 'update-all' does the same job."
+        ;;
+esac

@@ -17,6 +17,7 @@ fi
 update_all() {
   local current_dir sys_count user_count answer safe_gen do_upgrade
   local host_name active_dm target_gdm target_sddm target_default_session use_boot_workflow
+  local flake_target untracked
 
   do_upgrade=0
   use_boot_workflow=0
@@ -68,10 +69,22 @@ EOF
   fi
 
   host_name=$(hostname)
+  flake_target="${NIX_DIR}#${host_name}"
+
+  # The system is built straight from this repo. Nothing is copied to /etc/nixos.
+  if ! nix eval "${NIX_DIR}#nixosConfigurations.${host_name}" --apply 'x: true' >/dev/null 2>&1; then
+    echo "No flake config named '${host_name}' in ${NIX_DIR}."
+    echo -n "Available: "
+    nix eval --raw "${NIX_DIR}#nixosConfigurations" \
+      --apply 'c: builtins.concatStringsSep ", " (builtins.attrNames c)' 2>/dev/null || echo "(none)"
+    echo ""
+    cd "$current_dir"; return 1
+  fi
+
   active_dm=$(systemctl show -P ExecStart display-manager.service 2>/dev/null || true)
-  target_gdm=$(nix eval --json ".#nixosConfigurations.${host_name}.config.services.displayManager.gdm.enable" 2>/dev/null || echo false)
-  target_sddm=$(nix eval --json ".#nixosConfigurations.${host_name}.config.services.displayManager.sddm.enable" 2>/dev/null || echo false)
-  target_default_session=$(nix eval --raw ".#nixosConfigurations.${host_name}.config.services.displayManager.defaultSession" 2>/dev/null || echo "")
+  target_gdm=$(nix eval --json "${NIX_DIR}#nixosConfigurations.${host_name}.config.services.displayManager.gdm.enable" 2>/dev/null || echo false)
+  target_sddm=$(nix eval --json "${NIX_DIR}#nixosConfigurations.${host_name}.config.services.displayManager.sddm.enable" 2>/dev/null || echo false)
+  target_default_session=$(nix eval --raw "${NIX_DIR}#nixosConfigurations.${host_name}.config.services.displayManager.defaultSession" 2>/dev/null || echo "")
 
   if [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
     if [[ "$active_dm" == *"/sddm"* && "$target_gdm" == "true" ]] || \
@@ -80,11 +93,21 @@ EOF
     fi
   fi
 
-  # ── 2. Copy config to /etc/nixos ─────────────────────────────────────────
-  echo -e "\nCopying Nix files to /etc/nixos/..."
-  if ! sudo cp -r ./* /etc/nixos/; then
-    echo "copy to /etc/nixos failed"
-    cd "$current_dir"; return 1
+  # ── 2. Warn about files the flake cannot see ─────────────────────────────
+  # A flake build only reads git-tracked files. A new file is invisible to the
+  # rebuild until it is added, even without a commit.
+  if git -C "$NIX_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    untracked=$(git -C "$NIX_DIR" ls-files --others --exclude-standard)
+    if [ -n "$untracked" ]; then
+      echo -e "\nThese files are not tracked by git, so the rebuild will ignore them:"
+      echo "$untracked" | sed 's/^/  /'
+      echo "Run 'git add' on them first if the config needs them."
+      read -r -p "Continue anyway? [y/N] " answer
+      case "$answer" in
+        [yY][eE][sS]|[yY]) ;;
+        *) cd "$current_dir"; return 1 ;;
+      esac
+    fi
   fi
 
   # ── 3. Build using the safest activation strategy for the current session ─
@@ -95,7 +118,7 @@ EOF
     if [ -n "$target_default_session" ]; then
       echo "Target default session: $target_default_session"
     fi
-    if ! sudo nixos-rebuild build --show-trace; then
+    if ! sudo nixos-rebuild build --flake "$flake_target" --show-trace; then
       echo ""
       echo "nixos-rebuild build failed. Your running system is still on generation $safe_gen."
       cd "$current_dir"; return 1
@@ -106,7 +129,7 @@ EOF
     read -r -p "Install this as the next boot generation instead? [y/N] " answer
     case "$answer" in
       [yY][eE][sS]|[yY])
-        if ! sudo nixos-rebuild boot --show-trace; then
+        if ! sudo nixos-rebuild boot --flake "$flake_target" --show-trace; then
           echo "nixos-rebuild boot failed. Rebooting will keep generation $safe_gen."
           cd "$current_dir"; return 1
         fi
@@ -127,7 +150,7 @@ EOF
 
   echo -e "\nBuilding and testing new configuration..."
   echo "NOTE: If this fails or the desktop breaks, just reboot — the previous generation is safe."
-  if ! sudo nixos-rebuild test --show-trace; then
+  if ! sudo nixos-rebuild test --flake "$flake_target" --show-trace; then
     echo ""
     echo "nixos-rebuild test failed. No changes have been made to your boot configuration."
     echo "Your system is still on generation $safe_gen."
@@ -142,7 +165,7 @@ EOF
   read -r -p "Make this the default boot generation? [y/N] " answer
   case "$answer" in
     [yY][eE][sS]|[yY])
-      if ! sudo nixos-rebuild switch --show-trace; then
+      if ! sudo nixos-rebuild switch --flake "$flake_target" --show-trace; then
         echo "nixos-rebuild switch failed. Rebooting will return you to generation $safe_gen."
         cd "$current_dir"; return 1
       fi
@@ -248,7 +271,7 @@ validate_nix_config() {
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'
 
-alias Claudio='claude --remote-control --dangerously-skip-permissions --chrome'
+alias claudio='claude --remote-control --dangerously-skip-permissions --chrome'
 
 alias cdn='cd $NIX_DIR'
 alias cdc='cd $CODING_DIR'
