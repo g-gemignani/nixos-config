@@ -1,0 +1,36 @@
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Formatting
+        run: nix fmt -- --check .
+
+      - name: Shell scripts
+        run: |
+          bash -n install.sh
+          bash -n dots/bashrc
+
+      # This evaluates the whole NixOS configuration, which is what catches a
+      # broken option or a typo. It does not build the closure: a GNOME,
+      # Hyprland, wine and steam system does not fit on a free runner.
+      - name: Flake check
+        run: nix flake check --show-trace
+
+      - name: System closure evaluates
+        run: |
+          nix eval --raw \
+            '.#nixosConfigurations.gemignani.config.system.build.toplevel.drvPath'
