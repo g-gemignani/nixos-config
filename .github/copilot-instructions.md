@@ -6,6 +6,7 @@ This repository contains a personal NixOS + Home Manager configuration (flake-ba
 Key goals for an AI coding agent working here:
 - Understand the flake-driven layout (`flake.nix`) and how `nixos/configuration.nix` and `home.nix` are imported.
 - Preserve safety around secrets: the repo uses `sops`-encrypted files under `secrets/` and bootstrap/update helpers in `install.sh` and `dots/bashrc`.
+- The system is built from this repo via `--flake`, never from a copy in `/etc/nixos`.
 - Prefer minimal, targeted edits: keep changes localized to relevant Nix files and scripts.
 
 **Big picture / architecture**
@@ -13,7 +14,8 @@ Key goals for an AI coding agent working here:
 - `default.nix` is the non-flake compatibility entrypoint via `flake-compat`, so legacy `nix-build` style workflows can still resolve the system closure.
 - `nixos/configuration.nix` contains system-level options, packages, and systemd services (e.g. Surfshark OpenVPN units wired to a sops-managed secret).
 - `home.nix` configures the user environment via Home Manager: dotfiles (`dots/`), packages, VS Code settings, and session variables.
-- `install.sh` restores GPG state from a backup, while `dots/bashrc` defines local quality-of-life helpers such as `update-all` and VPN service wrappers.
+- `install.sh` restores GPG state from a backup and then offers the first `nixos-rebuild switch --flake`, which is what puts `update-all` on the PATH.
+- `dots/bashrc` defines local quality-of-life helpers such as `update-all` and VPN service wrappers.
 
 **Data flows and secrets**
 - Encrypted secrets live under `secrets/` and are decrypted through `sops-nix` at activation/runtime.
@@ -25,21 +27,30 @@ Key goals for an AI coding agent working here:
 - Do not commit unencrypted secret material. The repo includes `.sops.yaml` and encrypted files under `secrets/`; the runtime assumes `sops` is installed on the machine.
 
 **Developer workflows / common commands**
-- Update the flake, copy files and rebuild system (used by the `update-all` shell helper):
+- Rebuild the system (this is what the `update-all` shell helper does):
 
 ```bash
 cd $NIX_DIR         # default: $HOME/nixos-config
-nix flake update
-sudo cp -r ./* /etc/nixos/
-sudo nixos-rebuild switch --upgrade --show-trace
+nix flake update    # optional; `update-all --upgrade` does this
+sudo nixos-rebuild test --flake "$NIX_DIR#$(hostname)" --show-trace
+sudo nixos-rebuild switch --flake "$NIX_DIR#$(hostname)" --show-trace
 ```
 
-- Rebuild only the user's Home Manager configuration (when iterating on `home.nix`):
+The system is built straight from this repo. `/etc/nixos` is a symlink to it,
+not a copy, so the two can never drift apart. Do not add a copy step back:
+`cp -r` never deletes, so a copied `/etc/nixos` keeps files that were removed
+from the repo long ago.
 
-```bash
-nix build .#homeConfigurations.${USER}.activationPackage
-./result/activate
-```
+Because of the symlink, `sudo nixos-rebuild switch` with no `--flake` also works.
+Prefer the explicit `--flake` form: it names the host and does not depend on
+`/etc/nixos` existing.
+
+- A flake build only reads **git-tracked** files. A new file is invisible to the
+  rebuild until `git add` picks it up. A commit is not needed, tracking is.
+
+- Home Manager is wired in as a NixOS module through `home.nix`, so there is no
+  standalone `homeConfigurations` output. Changes to `home.nix` and anything
+  under `dots/` are applied by the same `nixos-rebuild` above.
 
 - Enter the repository development shell without native flake support:
 
@@ -76,9 +87,13 @@ validate-nix-config
 - Syntax-check Nix expressions before committing:
 
 ```bash
-nix eval --json .#nixosConfigurations.${USER}  # quick check of flake outputs
-nix flake check || true                       # run checks if available
+nix eval .#nixosConfigurations.$(hostname) --apply 'x: true'  # config exists?
+nix flake check                                               # run flake checks
+sudo nixos-rebuild build --flake ".#$(hostname)"              # build, do not activate
 ```
+
+`nixos-rebuild build` only builds. It does not touch the running system or the
+boot entries, so it is the safe way to check a change.
 
 - Try a dry-run for rebuilds on test machines or in local VM before pushing updates to a production device.
 

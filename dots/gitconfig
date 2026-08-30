@@ -1,5 +1,3 @@
-[safe]
-	directory = /etc/nixos
 [user]
 	email = guglielmogemignani@gmail.com
 	name = g-gemignani
