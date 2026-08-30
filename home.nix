@@ -27,7 +27,6 @@
       isort
       nix-search-cli
       nixfmt
-      direnv
       nixd
     ];
 
@@ -35,6 +34,14 @@
     home.file = {
       ".bashrc".text = builtins.readFile ./dots/bashrc;
       ".gitconfig".text = builtins.readFile ./dots/gitconfig;
+    };
+
+    # direnv on its own re-evaluates the flake on every cd into a project.
+    # nix-direnv caches that. The bash hook stays in dots/bashrc: the module
+    # writes its hook through programs.bash, which this config does not use.
+    programs.direnv = {
+      enable = true;
+      nix-direnv.enable = true;
     };
 
     imports = [

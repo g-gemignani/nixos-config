@@ -213,21 +213,13 @@ EOF
     echo "Only $user_count user generations present — skipping cleanup."
   fi
 
-  # ── 7. Garbage collection — only after confirming new gen is stable ───────
+  # ── 7. Garbage collection ────────────────────────────────────────────────
+  # nix.gc runs weekly and drops anything older than 30 days, so there is
+  # nothing to prompt for here. To reclaim space now, run:
+  #   sudo nix-collect-garbage -d
   echo ""
-  echo "WARNING: Garbage collection removes unreferenced store paths permanently."
-  echo "Only run this after you have confirmed the new generation ($new_gen) is fully working."
-  echo "If unsure, skip and run 'sudo nix-collect-garbage -d' manually later."
-  echo ""
-  read -r -p "Run full garbage collection now? [y/N] " answer
-  case "$answer" in
-    [yY][eE][sS]|[yY])
-      sudo nix-collect-garbage -d
-      ;;
-    *)
-      echo "Skipping garbage collection. Run it manually once you're confident the new generation is stable."
-      ;;
-  esac
+  echo "Garbage collection is scheduled weekly (nix.gc). Nothing to do here."
+  echo "To reclaim space now: sudo nix-collect-garbage -d"
 
   echo -e "\nUpdate complete! Current generation: $new_gen"
 }

@@ -166,7 +166,6 @@
     silver-searcher
     google-chrome
     flameshot
-    nix-direnv
     dnsutils
     rar
     unar
@@ -180,7 +179,6 @@
     vulkan-tools
     wineWow64Packages.staging
     dxvk
-    steam
     # coding
     python3
     uv
@@ -218,6 +216,20 @@
   };
 
   programs.gamemode.enable = true;
+
+  # The module, not just pkgs.steam. It is what brings the controller udev
+  # rules and the 32-bit FHS wrapper. It opens no ports: remotePlay and
+  # dedicatedServer both default to openFirewall = false.
+  programs.steam.enable = true;
+
+  # The closure is about 18 GB. Left to a prompt inside update-all, garbage
+  # collection only happens when someone remembers to say yes.
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 30d";
+  };
+  nix.optimise.automatic = true;
 
   nix.settings.experimental-features = [
     "nix-command"
