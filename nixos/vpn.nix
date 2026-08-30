@@ -18,9 +18,12 @@
     let
       regions = import ../vpn/regions.nix;
       updateSystemdResolved = "${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved";
+      # No sops unit here: sops-nix writes /run/secrets from an activation
+      # script, which has already run by the time anything can start these.
+      # "sops-nix.service" used to be listed and does not exist, so systemd
+      # ignored it. The ordering it implied was never real.
       vpnDependencies = [
         "network-online.target"
-        "sops-nix.service"
         "systemd-resolved.service"
       ];
 
