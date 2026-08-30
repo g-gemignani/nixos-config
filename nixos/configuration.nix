@@ -428,6 +428,13 @@
   };
 
   networking.firewall.enable = true;
+
+  # GNOME pulls in avahi, which opens UDP 5353 for mDNS. Nothing here uses
+  # it: printing is off, nssmdns4 is false so .local names never reach name
+  # resolution, and publish.enable is false so we advertise nothing. The
+  # daemon stays for GNOME's sake; only the inbound port closes. Set this
+  # back to true if network printer or cast discovery is ever wanted.
+  services.avahi.openFirewall = false;
   # If something ever does need to listen, open just that port here rather
   # than turning the firewall off:
   # networking.firewall.allowedTCPPorts = [ ... ];
