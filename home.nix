@@ -55,14 +55,23 @@ in
     ];
 
     # Dotfiles
-    home.file = {
-      ".bashrc".text = builtins.readFile ./dots/bashrc + vpnHelpers;
-      ".gitconfig".text = builtins.readFile ./dots/gitconfig;
+    home.file.".gitconfig".text = builtins.readFile ./dots/gitconfig;
+
+    # The module owns ~/.bashrc, so every other Home Manager module can add
+    # its own shell hook. Writing the file by hand with home.file cut those
+    # off, and home.sessionVariables with it.
+    #
+    # initExtra lands in the interactive part of the file, which is where
+    # everything in dots/bashrc belongs. The build runs a syntax check on the
+    # result, so a broken line fails the rebuild instead of the next shell.
+    programs.bash = {
+      enable = true;
+      initExtra = builtins.readFile ./dots/bashrc + vpnHelpers;
     };
 
     # direnv on its own re-evaluates the flake on every cd into a project.
-    # nix-direnv caches that. The bash hook stays in dots/bashrc: the module
-    # writes its hook through programs.bash, which this config does not use.
+    # nix-direnv caches that. programs.bash above is what lets this module
+    # install its own hook, so dots/bashrc no longer carries one.
     programs.direnv = {
       enable = true;
       nix-direnv.enable = true;
@@ -82,14 +91,12 @@ in
     # declaring `programs.gnupg` here when this file is used as a NixOS module
     # via `flake.nix` to prevent option evaluation errors.
 
-    # Export SSH_AUTH_SOCK to point at the user run-time gpg-agent ssh socket
-    # if present at runtime. This sets the default for shells started after
-    # home-manager activation; it's harmless if the socket doesn't exist.
-    home.sessionVariables = lib.mkMerge [
-      (lib.optionalAttrs true {
-        SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh";
-      })
-    ];
+    # No home.sessionVariables here. Home Manager exports them from ~/.profile,
+    # and a GDM session starts through the systemd user manager, which never
+    # runs a login shell. So .profile is dead on this machine and every
+    # variable it held was set a second time in dots/bashrc anyway. That file
+    # is the one place a shell variable lives. SSH_AUTH_SOCK is set there.
+
     # possible themes:
     # - "dank-material"
     # - "midnight"
