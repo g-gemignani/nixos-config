@@ -29,7 +29,7 @@
       }
 
       -- Options
-      vim.opt.background = "light"
+      vim.opt.background = "dark"
       vim.opt.copyindent = true
       vim.opt.clipboard = "unnamedplus"
       vim.opt.expandtab = true

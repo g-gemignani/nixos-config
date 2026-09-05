@@ -1,13 +1,9 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 
-let
-  theme = import (./hyprland/themes + "/${config.custom.hyprland.theme}.nix") { inherit lib pkgs; };
-in
 {
   xdg.mimeApps = {
     associations.added = {
@@ -34,6 +30,6 @@ in
           y = 26;
         };
       };
-    } theme.alacrittySettings;
+    } config.custom.hyprland.themeData.alacrittySettings;
   };
 }
