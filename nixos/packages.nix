@@ -18,6 +18,7 @@
     wget
     git
     gh
+    glab
     pinentry-curses
     htop
     silver-searcher
