@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: cachix/install-nix-action@v30
+      - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -19,17 +19,18 @@ jobs:
       - name: Formatting
         run: nix fmt -- --check .
 
+      # shellcheck finds what `bash -n` cannot: an unchecked cd, a masked
+      # return value, an unquoted word. The build syntax-checks dots/bashrc
+      # on its own, because programs.bash.initExtra reads it.
       - name: Shell scripts
-        run: |
-          bash -n install.sh
-          bash -n dots/bashrc
+        run: nix run nixpkgs#shellcheck -- --severity=warning install.sh dots/bashrc
+
+      - name: Flake check
+        run: nix flake check --show-trace
 
       # This evaluates the whole NixOS configuration, which is what catches a
       # broken option or a typo. It does not build the closure: a GNOME,
       # Hyprland, wine and steam system does not fit on a free runner.
-      - name: Flake check
-        run: nix flake check --show-trace
-
       - name: System closure evaluates
         run: |
           nix eval --raw \

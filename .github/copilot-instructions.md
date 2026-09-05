@@ -1,120 +1,51 @@
+# Instructions for a coding agent
 
-# Repository overview
+Read `README.md` first. It gives the layout, the rebuild commands and the
+checks. This file adds only what an agent gets wrong.
 
-This repository contains a personal NixOS + Home Manager configuration (flake-based). It is organized to be used both as a system `nixos/` configuration and as a user `home.nix` via the flake in `flake.nix`.
+## Where things live
 
-Key goals for an AI coding agent working here:
-- Understand the flake-driven layout (`flake.nix`) and how `nixos/configuration.nix` and `home.nix` are imported.
-- Preserve safety around secrets: the repo uses `sops`-encrypted files under `secrets/` and bootstrap/update helpers in `install.sh` and `dots/bashrc`.
-- The system is built from this repo via `--flake`, never from a copy in `/etc/nixos`.
-- Prefer minimal, targeted edits: keep changes localized to relevant Nix files and scripts.
+Do not look for the VPN units, the sops secrets or the VS Code settings in
+`nixos/configuration.nix` or `home.nix`. That file only imports.
 
-**Big picture / architecture**
-- `flake.nix` ties inputs (nixpkgs, home-manager, sops-nix) and exposes `nixosConfigurations.<username>`; it assembles system modules including `./nixos/configuration.nix` and `./home.nix`.
-- `default.nix` is the non-flake compatibility entrypoint via `flake-compat`, so legacy `nix-build` style workflows can still resolve the system closure.
-- `nixos/configuration.nix` contains system-level options, packages, and systemd services (e.g. Surfshark OpenVPN units wired to a sops-managed secret).
-- `home.nix` configures the user environment via Home Manager: dotfiles (`dots/`), packages, VS Code settings, and session variables.
-- `install.sh` restores GPG state from a backup and then offers the first `nixos-rebuild switch --flake`, which is what puts `update-all` on the PATH.
-- `dots/bashrc` defines local quality-of-life helpers such as `update-all` and VPN service wrappers.
+- OpenVPN units, the kill switch and `sops.secrets`: `nixos/vpn.nix`
+- Tunnel definitions: `vpn/regions.nix`, the one place a tunnel is named
+- System packages and the modules that wrap one: `nixos/packages.nix`
+- Firewall, DNS and `sshd`: `nixos/network.nix`
+- Display manager, fonts, audio and portals: `nixos/desktop.nix`
+- Per-program user configuration: `dots/`, one file per program
 
-**Data flows and secrets**
-- Encrypted secrets live under `secrets/` and are decrypted through `sops-nix` at activation/runtime.
-- `nixos/configuration.nix` declares `sops.secrets.vpn_auth` from `secrets/vpn_secrets.yaml`, and the Surfshark OpenVPN services read the resulting secret path directly via `config.sops.secrets.vpn_auth.path`.
+## Rules
 
-**Project-specific conventions**
-- `NIX_DIR` environment variable: local shell helpers expect `NIX_DIR` (default `~/nixos-config`). `dots/bashrc` sets a default if it is not already exported by the environment.
-- GPG / SSH agent: The configuration expects `gpg-agent` with SSH support. `home.nix` sets `SSH_AUTH_SOCK` to `$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh` and `dots/bashrc`/scripts try to use this socket.
-- Do not commit unencrypted secret material. The repo includes `.sops.yaml` and encrypted files under `secrets/`; the runtime assumes `sops` is installed on the machine.
+- A flake build reads git-tracked files only. Run `git add` on a new file, or
+  the rebuild will not see it.
+- `nix fmt` uses nixfmt in the RFC style. Every file already follows it.
+- Never write plain-text secrets. `secrets/` holds sops-encrypted files, and
+  `.sops.yaml` gives the recipients.
+- Never put an OpenVPN profile with a private key in `vpn/`. The Nix store is
+  world readable. Use `ovpnSecret` instead.
+- Do not change `system.stateVersion` or `home.stateVersion`.
+- Do not run `nixos-rebuild switch`. Ask the user. `nixos-rebuild build`
+  changes nothing and is the safe check.
 
-**Developer workflows / common commands**
-- Rebuild the system (this is what the `update-all` shell helper does):
+## Traps in this repository
 
-```bash
-cd $NIX_DIR         # default: $HOME/nixos-config
-nix flake update    # optional; `update-all --upgrade` does this
-sudo nixos-rebuild test --flake "$NIX_DIR#$(hostname)" --show-trace
-sudo nixos-rebuild switch --flake "$NIX_DIR#$(hostname)" --show-trace
-```
+- `~/.bashrc` comes from `programs.bash.initExtra`, which reads `dots/bashrc`.
+  The build syntax-checks that file, so a broken line fails the rebuild.
+- Home Manager writes `home.sessionVariables` to `~/.profile`. A GDM session
+  starts through the systemd user manager and never runs a login shell, so
+  that file does nothing here. Shell variables belong in `dots/bashrc`.
+- `home.nix` builds the `vpn-start-*` helpers from `vpn/regions.nix`, and
+  `nixos/vpn.nix` builds the units from the same file. One entry drives both.
+- `custom.hyprland.theme` picks a file in `dots/hyprland/themes/`. The option
+  is an enum built by reading that directory, so a new file is a new choice.
+  Alacritty reads the loaded theme through `custom.hyprland.themeData`.
 
-The system is built straight from this repo. `/etc/nixos` is a symlink to it,
-not a copy, so the two can never drift apart. Do not add a copy step back:
-`cp -r` never deletes, so a copied `/etc/nixos` keeps files that were removed
-from the repo long ago.
-
-Because of the symlink, `sudo nixos-rebuild switch` with no `--flake` also works.
-Prefer the explicit `--flake` form: it names the host and does not depend on
-`/etc/nixos` existing.
-
-- A flake build only reads **git-tracked** files. A new file is invisible to the
-  rebuild until `git add` picks it up. A commit is not needed, tracking is.
-
-- Home Manager is wired in as a NixOS module through `home.nix`, so there is no
-  standalone `homeConfigurations` output. Changes to `home.nix` and anything
-  under `dots/` are applied by the same `nixos-rebuild` above.
-
-- Enter the repository development shell without native flake support:
+## Before you hand back
 
 ```bash
-nix-shell
+nix fmt
+nix flake check
+nix eval --raw '.#nixosConfigurations.gemignani.config.system.build.toplevel.drvPath'
+shellcheck --severity=warning install.sh dots/bashrc
 ```
-
-- Run the local validation helper before rebuilding:
-
-```bash
-validate-nix-config
-```
-
-- Restore local GPG material from a backup folder:
-
-```bash
-./install.sh
-```
-
-**Files worth editing with caution (examples)**
-- `flake.nix` — changes affect how the flake exposes system and home configurations.
-- `default.nix` — compatibility shim for non-flake tooling; keep it aligned with `flake.lock` and the exported host name.
-- `shell.nix` — compatibility shim for non-flake development shells; keep it aligned with the default flake dev shell.
-- `nixos/configuration.nix` — system packages, services, and sops-managed VPN wiring. Example: Surfshark systemd services and `sops.secrets.vpn_auth`.
-- `home.nix` — user packages, dotfile wiring in `home.file`, VS Code settings under `programs.vscode.profiles.default`.
-- `install.sh` and `dots/bashrc` — local bootstrap/update helpers. Preserve `set -euo pipefail`, quoting, and permission handling.
-
-**Patterns & examples an agent should follow**
-- When editing Nix files, preserve the existing option structure and `lib`/`pkgs` parameterization used by the module functions (e.g., modules are written as `{ config, lib, pkgs, ... }:`).
-- Prefer adding options or small helper modules over large rewrites. Keep `system.stateVersion` unchanged without explicit migration steps.
-- For scripts that touch secrets, keep strict file permissions and avoid writing machine-specific state back into tracked dotfiles.
-
-**Testing / validation steps an agent should run locally**
-- Syntax-check Nix expressions before committing:
-
-```bash
-nix eval .#nixosConfigurations.$(hostname) --apply 'x: true'  # config exists?
-nix flake check                                               # run flake checks
-sudo nixos-rebuild build --flake ".#$(hostname)"              # build, do not activate
-```
-
-`nixos-rebuild build` only builds. It does not touch the running system or the
-boot entries, so it is the safe way to check a change.
-
-- Try a dry-run for rebuilds on test machines or in local VM before pushing updates to a production device.
-
-**What not to change without asking**
-- Any modifications that expose plaintext credentials or weaken sops usage.
-- Replacing `system.stateVersion` or wholesale changes that require manual migrations.
-
-If any section is unclear or you want more detail (e.g., sample `nix build` outputs, more VS Code settings, or guidance for adding a new systemd service), tell me which area to expand and I will iterate.
-
-**Key files & examples**
-- `flake.nix`: shows how `home-manager` is wired into `nixosConfigurations.<username>` and how `specialArgs` (e.g., `username`, `nix-search-cli`) are passed.
-- `default.nix`: bridges non-flake tooling to the flake outputs via `flake-compat`.
-- `shell.nix`: bridges non-flake `nix-shell` usage to the flake dev shell via `flake-compat`.
-- `home.nix`: Home Manager user config. Examples:
-	- Dotfiles wired via `home.file` (`.bashrc` and `.gitconfig`).
-	- `home.sessionVariables` setting `SSH_AUTH_SOCK` to `"$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"`.
-	- VS Code profile settings under `programs.vscode.profiles.default.userSettings`.
-- `nixos/configuration.nix`: System config. Examples:
-	- `environment.systemPackages` lists installed system packages (e.g., `openvpn`, `sops`).
-	- `sops.secrets.vpn_auth` exposes the decrypted VPN credentials to systemd units.
-	- `systemd.services.surfshark-openvpn-*` units read the sops-managed credential path directly.
-- `install.sh`: restores GPG backups into `~/.gnupg`, preserves permissions, and leaves the rebuild step explicit.
-- `dots/bashrc`: defines `update-all`, VPN helpers, and small utility functions.
-
