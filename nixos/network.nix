@@ -1,11 +1,5 @@
 # Hostname, DHCP, DNS, the firewall, and the one daemon allowed to listen.
-{
-  config,
-  lib,
-  pkgs,
-  username,
-  ...
-}:
+{ username, ... }:
 
 {
   networking.hostName = "${username}"; # Define your hostname.

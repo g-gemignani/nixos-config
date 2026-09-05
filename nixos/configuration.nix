@@ -2,8 +2,6 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 {
-  config,
-  lib,
   pkgs,
   username,
   ...
@@ -24,6 +22,11 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
 
+  # The ESP is 487 MB and each generation puts a kernel and an initrd on it.
+  # Without a limit the partition fills up and the next rebuild fails. Ten
+  # matches the number of generations that update_all keeps.
+  boot.loader.systemd-boot.configurationLimit = 10;
+
   # Define a user account. Don't forget to set a password with 'passwd'.
   users.users = {
     "${username}" = {
@@ -35,12 +38,11 @@
       packages = with pkgs; [
         tree
       ];
-      # surfshark user service declared globally below
     };
   };
 
-  security.polkit.enable = true;
-  security.sudo.enable = true;
+  # polkit and sudo are on by default. Only hyprlock needs a line: it must
+  # authenticate against PAM to unlock the screen.
   security.pam.services.hyprlock = { };
 
   # This option defines the first version of NixOS you have installed on this particular machine,

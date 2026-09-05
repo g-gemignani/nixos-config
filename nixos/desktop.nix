@@ -1,11 +1,5 @@
 # Display manager, the two sessions, sound, input, fonts and portals.
-{
-  config,
-  lib,
-  pkgs,
-  username,
-  ...
-}:
+{ pkgs, ... }:
 
 {
   # Set your time zone.

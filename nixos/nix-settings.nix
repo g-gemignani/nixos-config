@@ -1,11 +1,5 @@
 # Garbage collection, store optimisation, caches and flake features.
-{
-  config,
-  lib,
-  pkgs,
-  username,
-  ...
-}:
+{ ... }:
 
 {
   nix.gc = {

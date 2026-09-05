@@ -1,11 +1,5 @@
 # What is installed system-wide, plus the modules that wrap a package.
-{
-  config,
-  lib,
-  pkgs,
-  username,
-  ...
-}:
+{ pkgs, ... }:
 
 {
   # List packages installed in system profile.
@@ -32,11 +26,8 @@
     wine
     winetricks
     cabextract
-    mesa
-    vulkan-loader
     vulkan-tools
     wineWow64Packages.staging
-    dxvk
     # coding
     python3
     uv
@@ -49,7 +40,6 @@
     claude-code
     # VPN support: OpenVPN + NetworkManager plugins
     openvpn
-    home-manager
     networkmanager-openvpn
     networkmanagerapplet
     transmission_4-qt
@@ -61,15 +51,13 @@
     # office
     onlyoffice-desktopeditors
     xournalpp
-    # Wayland utilities
   ];
 
+  # enable32Bit is what wine and steam need. The mesa drivers come with the
+  # option: hardware.graphics.package already defaults to pkgs.mesa.
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
-    extraPackages = with pkgs; [
-      mesa
-    ];
   };
 
   programs.gamemode.enable = true;
@@ -78,9 +66,6 @@
   # rules and the 32-bit FHS wrapper. It opens no ports: remotePlay and
   # dedicatedServer both default to openFirewall = false.
   programs.steam.enable = true;
-
-  # The closure is about 18 GB. Left to a prompt inside update-all, garbage
-  # collection only happens when someone remembers to say yes.
 
   services.ollama = {
     enable = true;
