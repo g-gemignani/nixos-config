@@ -2,7 +2,6 @@
   description = "My NixOS configuration";
 
   inputs = {
-    # Add nixpkgs and other necessary inputs
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     flake-compat = {
@@ -14,9 +13,13 @@
     # Make sure home-manager uses the same nixpkgs
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
+    # Both follow nixpkgs. Without it the lock carries a second and a third
+    # copy of nixpkgs, which is a download and an evaluation for nothing.
     hyprshell.url = "github:H3rmt/hyprshell/hyprshell-release";
+    hyprshell.inputs.nixpkgs.follows = "nixpkgs";
 
     sops-nix.url = "github:Mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
 
     # Always-fresh Claude Code, rebuilt hourly from Anthropic's releases.
     # Overrides nixpkgs' (lagging) claude-code via overlays.default below.
@@ -26,27 +29,22 @@
 
   outputs =
     {
-      self,
       nixpkgs,
       sops-nix,
-      hyprshell,
       home-manager,
       ...
     }@inputs:
     let
-      pkgs = import nixpkgs { system = "x86_64-linux"; };
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
       username = "gemignani";
     in
     {
-      packages.x86_64-linux = {
-        my-nix-search = pkgs.nix-search-cli;
-      };
-
       # One formatter, so `nix fmt` and the editor agree. pkgs.nixfmt is the
       # RFC-style build, which is what every file in this repo already uses.
-      formatter.x86_64-linux = pkgs.nixfmt;
+      formatter.${system} = pkgs.nixfmt;
 
-      devShells.x86_64-linux.default = pkgs.mkShell {
+      devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
           bashInteractive
           git
@@ -57,27 +55,20 @@
       };
 
       nixosConfigurations.${username} = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
         modules = [
-          (
-            { config, ... }:
-            {
-              nixpkgs.config.allowUnfree = true;
-              # Replace nixpkgs' claude-code with the hourly-updated flake package.
-              nixpkgs.overlays = [ inputs.claude-code.overlays.default ];
-            }
-          )
+          {
+            nixpkgs.config.allowUnfree = true;
+            # Replace nixpkgs' claude-code with the hourly-updated flake package.
+            nixpkgs.overlays = [ inputs.claude-code.overlays.default ];
+          }
           ./nixos/configuration.nix
-          sops-nix.nixosModules.sops # Now this will be correctly referenced
+          sops-nix.nixosModules.sops
           home-manager.nixosModules.home-manager
           ./home.nix
         ];
 
-        # Optional: expose the package and pass username to modules
-        specialArgs = {
-          inherit inputs;
-          username = username;
-        };
+        specialArgs = { inherit inputs username; };
       };
     };
 }
