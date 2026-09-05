@@ -69,6 +69,7 @@ in
     imports = [
       inputs.hyprshell.homeModules.hyprshell
       ./dots/alacritty.nix
+      ./dots/gnome.nix
       ./dots/hyprland.nix
       ./dots/nvim.nix
       ./dots/vscode.nix
