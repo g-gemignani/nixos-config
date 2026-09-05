@@ -16,15 +16,15 @@ let
     lib.mapAttrsToList (key: _region: ''
 
       vpn-start-${key}() {
-        sudo systemctl start surfshark-openvpn-${key}.service
+        sudo systemctl start vpn-${key}.service
       }
 
       vpn-stop-${key}() {
-        sudo systemctl stop surfshark-openvpn-${key}.service
+        sudo systemctl stop vpn-${key}.service
       }
 
       vpn-status-${key}() {
-        sudo systemctl status surfshark-openvpn-${key}.service
+        sudo systemctl status vpn-${key}.service
       }
     '') regions
   );
@@ -50,6 +50,8 @@ in
       nix-search-cli
       nixfmt
       nixd
+      # Claude Code plugin hooks (ponytail) run node scripts.
+      nodejs
     ];
 
     # Dotfiles

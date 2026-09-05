@@ -1,4 +1,4 @@
-# Surfshark tunnels and the kill switch that stops them leaking.
+# OpenVPN tunnels and the kill switch that stops them leaking.
 # Regions come from ../vpn/regions.nix, which also drives the shell helpers.
 {
   config,
@@ -8,15 +8,32 @@
   ...
 }:
 
+let
+  regions = import ../vpn/regions.nix;
+
+  # A tunnel whose profile holds a private key ships the whole .ovpn file in
+  # sops. sops-nix writes it to /run/secrets/<name>, readable by root only,
+  # so the key never lands in the world-readable nix store.
+  secretProfiles = lib.filterAttrs (_: region: region ? ovpnSecret) regions;
+in
+
 {
-  sops.secrets.vpn_auth = {
-    sopsFile = ../secrets/vpn_secrets.yaml; # Path to your encrypted file
-    owner = "root";
-  };
+  sops.secrets = {
+    vpn_auth = {
+      sopsFile = ../secrets/vpn_secrets.yaml; # Path to your encrypted file
+      owner = "root";
+    };
+  }
+  // lib.mapAttrs' (
+    _: region:
+    lib.nameValuePair region.ovpnSecret {
+      sopsFile = ../secrets/vpn_secrets.yaml;
+      owner = "root";
+    }
+  ) secretProfiles;
 
   systemd.services =
     let
-      regions = import ../vpn/regions.nix;
       updateSystemdResolved = "${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved";
       # No sops unit here: sops-nix writes /run/secrets from an activation
       # script, which has already run by the time anything can start these.
@@ -108,40 +125,55 @@
         exit 0
       '';
 
-      mkSurfsharkService = region: conflictsWith: ovpnFile: {
-        description = "Surfshark OpenVPN (system) - ${region}";
-        wants = vpnDependencies;
+      mkTunnel =
+        key: region:
+        let
+          # A tunnel with killSwitch = false keeps its own route out. See the
+          # note on the 24 entry in ../vpn/regions.nix.
+          killSwitch = lib.optional (region.killSwitch or true) "surfshark-killswitch.service";
+          profile =
+            if region ? ovpnSecret then config.sops.secrets.${region.ovpnSecret}.path else region.ovpn;
+          # A profile that authenticates by certificate must not send a
+          # username and password.
+          authArgs = lib.optionalString (region.authUserPass or true
+          ) " --auth-user-pass ${config.sops.secrets.vpn_auth.path}";
+        in
+        {
+          description = "OpenVPN (system) - ${region.name}";
+          wants = vpnDependencies;
 
-        # The kill switch must be armed before openvpn sends its first packet,
-        # and it stops on its own once no tunnel needs it.
-        requires = [ "surfshark-killswitch.service" ];
-        after = vpnDependencies ++ [ "surfshark-killswitch.service" ];
+          # The kill switch must be armed before openvpn sends its first
+          # packet, and it stops on its own once no tunnel needs it.
+          requires = killSwitch;
+          after = vpnDependencies ++ killSwitch;
 
-        # Two tunnels at once fight over the default route.
-        conflicts = conflictsWith;
+          # Two tunnels at once fight over the default route.
+          conflicts = map (other: "vpn-${other}.service") (
+            builtins.filter (k: k != key) (builtins.attrNames regions)
+          );
 
-        serviceConfig = {
-          AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-          CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
-          ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${ovpnFile} --auth-user-pass ${config.sops.secrets.vpn_auth.path} --script-security 2 --up ${updateSystemdResolved} --up-restart --down ${updateSystemdResolved} --down-pre";
-          LockPersonality = true;
-          MemoryDenyWriteExecute = true;
-          NoNewPrivileges = true;
-          PrivateTmp = true;
-          ProtectClock = true;
-          ProtectControlGroups = true;
-          ProtectHome = true;
-          ProtectKernelLogs = true;
-          ProtectKernelModules = true;
-          ProtectKernelTunables = true;
-          Restart = "on-failure";
-          RestartSec = 5;
-          RestrictNamespaces = true;
-          RestrictSUIDSGID = true;
-          Type = "simple";
-          UMask = "0077";
+          serviceConfig = {
+            AmbientCapabilities = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+            CapabilityBoundingSet = "CAP_NET_ADMIN CAP_NET_BIND_SERVICE";
+            ExecStart = "${pkgs.openvpn}/bin/openvpn --config ${profile}${authArgs} --script-security 2 --up ${updateSystemdResolved} --up-restart --down ${updateSystemdResolved} --down-pre";
+            LockPersonality = true;
+            MemoryDenyWriteExecute = true;
+            NoNewPrivileges = true;
+            PrivateTmp = true;
+            ProtectClock = true;
+            ProtectControlGroups = true;
+            ProtectHome = true;
+            ProtectKernelLogs = true;
+            ProtectKernelModules = true;
+            ProtectKernelTunables = true;
+            Restart = "on-failure";
+            RestartSec = 5;
+            RestrictNamespaces = true;
+            RestrictSUIDSGID = true;
+            Type = "simple";
+            UMask = "0077";
+          };
         };
-      };
     in
     {
       surfshark-killswitch = {
@@ -159,14 +191,5 @@
       };
 
     }
-    // lib.mapAttrs' (
-      key: region:
-      lib.nameValuePair "surfshark-openvpn-${key}" (
-        mkSurfsharkService region.name (map (other: "surfshark-openvpn-${other}.service") (
-          builtins.filter (k: k != key) (builtins.attrNames regions)
-        )) region.ovpn
-      )
-    ) regions
-    // {
-    };
+    // lib.mapAttrs' (key: region: lib.nameValuePair "vpn-${key}" (mkTunnel key region)) regions;
 }
