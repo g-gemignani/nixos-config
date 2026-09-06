@@ -52,6 +52,8 @@ in
       nixd
       # Claude Code plugin hooks (ponytail) run node scripts.
       nodejs
+      # Voice mode in Claude Code records with `rec`, which sox gives.
+      sox
     ];
 
     # Dotfiles
