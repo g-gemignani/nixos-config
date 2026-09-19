@@ -16,7 +16,8 @@
     pinentry-curses
     htop
     silver-searcher
-    google-chrome
+    # Chrome crashes on Wayland with GTK4. GTK3 is stable.
+    (google-chrome.override { commandLineArgs = "--gtk-version=3"; })
     flameshot
     dnsutils
     rar
