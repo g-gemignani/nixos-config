@@ -27,6 +27,15 @@
   # matches the number of generations that update_all keeps.
   boot.loader.systemd-boot.configurationLimit = 10;
 
+  # This kernel does not support the Arrow Lake GPU (7d51) without a flag.
+  # Without the driver, GNOME runs on simpledrm: it cannot turn off the
+  # backlight on lock and it cannot find the real size of the screen.
+  # Remove these parameters when the kernel supports 7d51 by default.
+  boot.kernelParams = [
+    "xe.force_probe=7d51"
+    "i915.force_probe=!7d51"
+  ];
+
   # Define a user account. Don't forget to set a password with 'passwd'.
   users.users = {
     "${username}" = {
