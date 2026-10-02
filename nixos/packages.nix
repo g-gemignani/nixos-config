@@ -15,6 +15,7 @@
     glab
     pinentry-curses
     htop
+    tree
     silver-searcher
     # Chrome crashes on Wayland with GTK4. GTK3 is stable.
     (google-chrome.override { commandLineArgs = "--gtk-version=3"; })

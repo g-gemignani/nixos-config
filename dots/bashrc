@@ -1,15 +1,9 @@
 # shellcheck shell=bash
 PYTHONWARNINGS="ignore:setup.py install is deprecated::setuptools.command.install"; export PYTHONWARNINGS
-# Only run bind commands in interactive shells
-if [[ $- == *i* ]]; then
-  bind '"\e[A":history-search-backward'
-  bind '"\e[B":history-search-forward'
-fi
+bind '"\e[A":history-search-backward'
+bind '"\e[B":history-search-forward'
 export CODING_DIR="$HOME/Coding"
-: "${NIX_DIR:=}" >/dev/null
-if [ -z "${NIX_DIR:-}" ]; then
-  export NIX_DIR="$HOME/nixos-config"
-fi
+export NIX_DIR="${NIX_DIR:-$HOME/nixos-config}"
 
 # The body runs in a subshell, so its cd never leaks into the calling shell.
 update_all() (
@@ -136,6 +130,18 @@ validate_nix_config() (
 
   echo -e "Validation complete!"
 )
+
+# Start, stop or show one tunnel from vpn/regions.nix: vpn start it
+vpn() {
+  case "$1" in
+    start | stop) sudo systemctl "$1" "vpn-$2.service" ;;
+    status) systemctl status "vpn-$2.service" ;;
+    *)
+      echo "Usage: vpn start|stop|status <region>"
+      return 1
+      ;;
+  esac
+}
 
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'

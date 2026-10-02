@@ -1,5 +1,5 @@
 # OpenVPN tunnels and the kill switch that stops them leaking.
-# Regions come from ../vpn/regions.nix, which also drives the shell helpers.
+# Regions come from ../vpn/regions.nix.
 {
   config,
   lib,

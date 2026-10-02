@@ -13,8 +13,8 @@
     "nix-command"
     "flakes"
   ];
-  nix.settings.download-buffer-size = 524288000;
   nix.settings = {
+    download-buffer-size = 524288000;
     substituters = [
       "https://cache.nixos.org/"
       "https://ros.cachix.org"

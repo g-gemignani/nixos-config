@@ -1,33 +1,10 @@
 {
   pkgs,
-  lib,
   inputs,
   username,
   ...
 }:
 
-let
-  regions = import ./vpn/regions.nix;
-
-  # Generated from the same list that builds the systemd units, so a new
-  # region never leaves the shell helpers behind.
-  vpnHelpers = lib.concatStrings (
-    lib.mapAttrsToList (key: _region: ''
-
-      vpn-start-${key}() {
-        sudo systemctl start vpn-${key}.service
-      }
-
-      vpn-stop-${key}() {
-        sudo systemctl stop vpn-${key}.service
-      }
-
-      vpn-status-${key}() {
-        sudo systemctl status vpn-${key}.service
-      }
-    '') regions
-  );
-in
 {
   home-manager.backupFileExtension = "backup";
   # Use the system pkgs, so Home Manager does not evaluate nixpkgs a second
@@ -59,7 +36,7 @@ in
     ];
 
     # Dotfiles
-    home.file.".gitconfig".text = builtins.readFile ./dots/gitconfig;
+    home.file.".gitconfig".source = ./dots/gitconfig;
 
     # The module owns ~/.bashrc, so every other Home Manager module can add
     # its own shell hook. Writing the file by hand with home.file cut those
@@ -70,7 +47,7 @@ in
     # result, so a broken line fails the rebuild instead of the next shell.
     programs.bash = {
       enable = true;
-      initExtra = builtins.readFile ./dots/bashrc + vpnHelpers;
+      initExtra = builtins.readFile ./dots/bashrc;
     };
 
     # direnv on its own re-evaluates the flake on every cd into a project.

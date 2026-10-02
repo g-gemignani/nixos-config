@@ -63,12 +63,11 @@ both read that selection, so the terminal follows the desktop.
 ## VPN
 
 `vpn/regions.nix` is the only place a tunnel is named. Each entry becomes a
-systemd unit and a set of shell helpers:
+systemd unit, `vpn-<key>.service`. The `vpn` function in `dots/bashrc`
+controls one tunnel by its key:
 
 ```bash
-vpn-start-it     vpn-stop-it     vpn-status-it
-vpn-start-us     vpn-stop-us     vpn-status-us
-vpn-start-24     vpn-stop-24     vpn-status-24
+vpn start it     vpn stop it     vpn status it
 ```
 
 Two tunnels cannot run together: each unit conflicts with the others, because

@@ -35,8 +35,9 @@ Do not look for the VPN units, the sops secrets or the VS Code settings in
 - Home Manager writes `home.sessionVariables` to `~/.profile`. A GDM session
   starts through the systemd user manager and never runs a login shell, so
   that file does nothing here. Shell variables belong in `dots/bashrc`.
-- `home.nix` builds the `vpn-start-*` helpers from `vpn/regions.nix`, and
-  `nixos/vpn.nix` builds the units from the same file. One entry drives both.
+- `nixos/vpn.nix` builds one `vpn-<key>.service` per entry in
+  `vpn/regions.nix`. The `vpn` function in `dots/bashrc` takes the same key,
+  so a new entry needs no shell change.
 - `custom.hyprland.theme` picks a file in `dots/hyprland/themes/`. The option
   is an enum built by reading that directory, so a new file is a new choice.
   Alacritty reads the loaded theme through `custom.hyprland.themeData`.

@@ -1,7 +1,7 @@
 # The only place a tunnel is named.
 #
-# nixos/vpn.nix turns each entry into a systemd unit, and home.nix turns each
-# into vpn-start-<key>, vpn-stop-<key> and vpn-status-<key> shell helpers.
+# nixos/vpn.nix turns each entry into a systemd unit, vpn-<key>.service.
+# The vpn function in dots/bashrc starts, stops and shows one by its key.
 # Adding a tunnel means adding its profile and one entry here.
 #
 # Per entry:
