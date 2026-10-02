@@ -5,16 +5,11 @@
   # Set your time zone.
   time.timeZone = "Europe/Berlin";
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
   console = {
     font = "Lat2-Terminus16";
     keyMap = "de";
-    #   useXkbConfig = true; # use xkb.options in tty.
   };
 
   # Enable the X11 windowing system (required base even for Wayland/Hyprland).
@@ -36,9 +31,6 @@
   services.xserver.xkb.layout = "de,us";
   services.xserver.xkb.options = "grp:ctrl_space_toggle";
 
-  # Enable CUPS to print documents.
-  # services.printing.enable = true;
-
   # Enable sound via PipeWire.
   services.pipewire = {
     enable = true;
@@ -46,9 +38,6 @@
     alsa.enable = true;
     pulse.enable = true;
   };
-
-  # Enable touchpad support (enabled by default in most desktopManagers).
-  services.libinput.enable = true;
 
   fonts = {
     packages = with pkgs; [
@@ -90,13 +79,6 @@
     NIXOS_OZONE_WL = "1";
   };
 
-  # Portals are required for screen sharing, file pickers, and browser integration.
-  xdg.portal = {
-    enable = true;
-    extraPortals = with pkgs; [
-      xdg-desktop-portal-gtk
-      xdg-desktop-portal-hyprland
-      xdg-desktop-portal-gnome
-    ];
-  };
+  # No xdg.portal block. The GNOME and Hyprland modules turn portals on and
+  # add the gnome, gtk and hyprland portals themselves.
 }

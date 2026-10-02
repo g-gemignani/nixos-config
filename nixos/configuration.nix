@@ -23,8 +23,7 @@
   boot.loader.efi.canTouchEfiVariables = false;
 
   # The ESP is 487 MB and each generation puts a kernel and an initrd on it.
-  # Without a limit the partition fills up and the next rebuild fails. Ten
-  # matches the number of generations that update_all keeps.
+  # Without a limit the partition fills up and the next rebuild fails.
   boot.loader.systemd-boot.configurationLimit = 10;
 
   # This kernel does not support the Arrow Lake GPU (7d51) without a flag.

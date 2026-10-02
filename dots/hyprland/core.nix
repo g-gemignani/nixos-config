@@ -78,8 +78,8 @@ in
 {
   fonts.fontconfig.enable = true;
 
-  # Every Nix store dir has mtime 0, and ~/.nix-profile/share/fonts keeps the
-  # same path across generations. So fontconfig thinks its cache is still valid
+  # Every Nix store dir has mtime 0, and the font directory of the user profile
+  # keeps the same path across generations. So fontconfig thinks its cache is still valid
   # and never rescans. Drop a font package and it keeps handing out the dead
   # store path, which makes Pango draw boxes instead of glyphs. Force a rescan.
   home.activation.rebuildFontCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -253,7 +253,7 @@ in
     configType = "hyprlang";
     plugins = [ hyprbars ];
     systemd.enable = false;
-    # nixos/desktop.nix installs the portals. With a package here, Home
+    # The NixOS GNOME and Hyprland modules install the portals. With a package here, Home
     # Manager points NIX_XDG_DESKTOP_PORTAL_DIR at a directory that holds the
     # Hyprland portal only. GNOME then has no Screenshot portal, and
     # flameshot hangs.

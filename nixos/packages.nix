@@ -24,7 +24,6 @@
     unar
     # gaming
     lutris # set wine-ge-proton as runner for Battle.net
-    wine
     winetricks
     cabextract
     vulkan-tools
@@ -36,12 +35,8 @@
     cargo
     gcc
     pkg-config
-    ollama
     code-cursor
     claude-code
-    # VPN support: OpenVPN + NetworkManager plugins
-    openvpn
-    networkmanager-openvpn
     networkmanagerapplet
     transmission_4-qt
     wdisplays

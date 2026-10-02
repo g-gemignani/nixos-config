@@ -11,9 +11,9 @@ if [ -z "${NIX_DIR:-}" ]; then
   export NIX_DIR="$HOME/nixos-config"
 fi
 
-update_all() {
-  local current_dir sys_count user_count answer safe_gen do_upgrade
-  local host_name flake_target untracked
+# The body runs in a subshell, so its cd never leaks into the calling shell.
+update_all() (
+  local answer safe_gen new_gen do_upgrade flake_target untracked
 
   do_upgrade=0
 
@@ -23,11 +23,11 @@ update_all() {
         do_upgrade=1
         ;;
       -h|--help)
-        cat <<'EOF'
+        cat <<'EOF2'
 Usage: update_all [--upgrade]
 
   --upgrade  Run `nix flake update` before rebuilding.
-EOF
+EOF2
         return 0
         ;;
       *)
@@ -38,8 +38,6 @@ EOF
     esac
     shift
   done
-
-  current_dir=$(pwd)
 
   # Require sudo upfront
   sudo -v || return 1
@@ -57,24 +55,14 @@ EOF
     echo -e "\nUpdating Nix flake..."
     if ! nix flake update; then
       echo "nix flake update failed"
-      cd "$current_dir" || true; return 1
+      return 1
     fi
   else
     echo -e "\nSkipping flake update (pass --upgrade to refresh flake.lock)."
   fi
 
-  host_name=$(hostname)
-  flake_target="${NIX_DIR}#${host_name}"
-
   # The system is built straight from this repo. Nothing is copied to /etc/nixos.
-  if ! nix eval "${NIX_DIR}#nixosConfigurations.${host_name}" --apply 'x: true' >/dev/null 2>&1; then
-    echo "No flake config named '${host_name}' in ${NIX_DIR}."
-    echo -n "Available: "
-    nix eval --raw "${NIX_DIR}#nixosConfigurations" \
-      --apply 'c: builtins.concatStringsSep ", " (builtins.attrNames c)' 2>/dev/null || echo "(none)"
-    echo ""
-    cd "$current_dir" || true; return 1
-  fi
+  flake_target="${NIX_DIR}#$(hostname)"
 
   # ── 2. Warn about files the flake cannot see ─────────────────────────────
   # A flake build only reads git-tracked files. A new file is invisible to the
@@ -88,7 +76,7 @@ EOF
       read -r -p "Continue anyway? [y/N] " answer
       case "$answer" in
         [yY][eE][sS]|[yY]) ;;
-        *) cd "$current_dir" || true; return 1 ;;
+        *) return 1 ;;
       esac
     fi
   fi
@@ -100,7 +88,7 @@ EOF
     echo ""
     echo "nixos-rebuild test failed. No changes have been made to your boot configuration."
     echo "Your system is still on generation $safe_gen."
-    cd "$current_dir" || true; return 1
+    return 1
   fi
 
   # ── 4. Confirm before making it the boot default ─────────────────────────
@@ -113,94 +101,41 @@ EOF
     [yY][eE][sS]|[yY])
       if ! sudo nixos-rebuild switch --flake "$flake_target" --show-trace; then
         echo "nixos-rebuild switch failed. Rebooting will return you to generation $safe_gen."
-        cd "$current_dir" || true; return 1
+        return 1
       fi
       ;;
     *)
       echo ""
       echo "Keeping generation $safe_gen as boot default."
       echo "The new config is active in this session only — reboot to go back to gen $safe_gen."
-      cd "$current_dir" || return 1
       return 0
       ;;
   esac
 
   # ── 5. Show new generation state ─────────────────────────────────────────
-  echo -e "\n=== Updated system generations ==="
-  sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
-  local new_gen
+  # No cleanup here. boot.loader.systemd-boot.configurationLimit caps the boot
+  # entries, and nix.gc deletes generations older than 30 days every week.
   new_gen=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
     | grep current | awk '{print $1}')
-  echo -e "\n>>> New current generation: $new_gen | Previous safe generation was: $safe_gen <<<"
-
-  # ── 6. Clean up old generations (never touches current) ──────────────────
-  cd "$current_dir" || return 1
-  echo -e "\nCleaning up old system generations (keeping latest 10)..."
-  sys_count=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
-    2>/dev/null | wc -l | tr -d ' ')
-  [ -z "$sys_count" ] && sys_count=0
-
-  if [ "$sys_count" -gt 10 ]; then
-    echo "Found $sys_count system generations — deleting oldest, keeping latest 10."
-    echo "Note: the current generation ($new_gen) is always protected."
-    sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +10
-  else
-    echo "Only $sys_count system generations present — skipping cleanup."
-  fi
-
-  echo -e "\nCleaning up old user generations (keeping latest 10)..."
-  user_count=$(nix-env --list-generations 2>/dev/null | wc -l | tr -d ' ')
-  [ -z "$user_count" ] && user_count=0
-
-  if [ "$user_count" -gt 10 ]; then
-    echo "Found $user_count user generations — deleting oldest, keeping latest 10."
-    nix-env --delete-generations +10
-  else
-    echo "Only $user_count user generations present — skipping cleanup."
-  fi
-
-  # ── 7. Garbage collection ────────────────────────────────────────────────
-  # nix.gc runs weekly and drops anything older than 30 days, so there is
-  # nothing to prompt for here. To reclaim space now, run:
-  #   sudo nix-collect-garbage -d
-  echo ""
-  echo "Garbage collection is scheduled weekly (nix.gc). Nothing to do here."
+  echo -e "\nUpdate complete! New generation: $new_gen | Previous safe generation was: $safe_gen"
   echo "To reclaim space now: sudo nix-collect-garbage -d"
+)
 
-  echo -e "\nUpdate complete! Current generation: $new_gen"
-}
-
-validate_nix_config() {
-  local current_dir
-
-  current_dir=$(pwd)
+validate_nix_config() (
   cd "$NIX_DIR" || return 1
 
   echo -e "\nChecking shell scripts..."
-  nix run nixpkgs#shellcheck -- --severity=warning install.sh dots/bashrc || {
-    cd "$current_dir" || return 1
-    return 1
-  }
+  nix run nixpkgs#shellcheck -- --severity=warning install.sh dots/bashrc || return 1
 
   echo -e "\nChecking flake outputs..."
-  nix flake check || {
-    cd "$current_dir" || return 1
-    return 1
-  }
+  nix flake check || return 1
 
   echo -e "\nChecking compatibility entrypoints..."
-  nix-instantiate --eval default.nix >/dev/null || {
-    cd "$current_dir" || return 1
-    return 1
-  }
-  nix-instantiate --eval shell.nix >/dev/null || {
-    cd "$current_dir" || return 1
-    return 1
-  }
+  nix-instantiate --eval default.nix >/dev/null || return 1
+  nix-instantiate --eval shell.nix >/dev/null || return 1
 
-  cd "$current_dir" || return 1
   echo -e "Validation complete!"
-}
+)
 
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'

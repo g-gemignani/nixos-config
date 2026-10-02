@@ -18,17 +18,10 @@ in
 
 {
   sops.secrets = {
-    vpn_auth = {
-      sopsFile = ../secrets/vpn_secrets.yaml; # Path to your encrypted file
-      owner = "root";
-    };
+    vpn_auth.sopsFile = ../secrets/vpn_secrets.yaml;
   }
   // lib.mapAttrs' (
-    _: region:
-    lib.nameValuePair region.ovpnSecret {
-      sopsFile = ../secrets/vpn_secrets.yaml;
-      owner = "root";
-    }
+    _: region: lib.nameValuePair region.ovpnSecret { sopsFile = ../secrets/vpn_secrets.yaml; }
   ) secretProfiles;
 
   systemd.services =

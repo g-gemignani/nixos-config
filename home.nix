@@ -1,6 +1,5 @@
 {
   pkgs,
-  home-manager,
   lib,
   inputs,
   username,
@@ -31,12 +30,15 @@ let
 in
 {
   home-manager.backupFileExtension = "backup";
+  # Use the system pkgs, so Home Manager does not evaluate nixpkgs a second
+  # time and the overlays and allowUnfree in flake.nix apply here too.
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
   home-manager.extraSpecialArgs = {
     inherit inputs;
   };
 
   home-manager.users.${username} = {
-    nixpkgs.config.allowUnfree = true;
     home.stateVersion = "25.05";
 
     home.activation.createCodingDir = ''
@@ -88,23 +90,13 @@ in
       ./dots/vscode.nix
     ];
 
-    # NOTE: configure gpg-agent either in the system `nixos/configuration.nix`
-    # (see `programs.gnupg.agent = { ... }`) or in a Home Manager module. Avoid
-    # declaring `programs.gnupg` here when this file is used as a NixOS module
-    # via `flake.nix` to prevent option evaluation errors.
-
     # No home.sessionVariables here. Home Manager exports them from ~/.profile,
     # and a GDM session starts through the systemd user manager, which never
     # runs a login shell. So .profile is dead on this machine and every
     # variable it held was set a second time in dots/bashrc anyway. That file
     # is the one place a shell variable lives. SSH_AUTH_SOCK is set there.
 
-    # possible themes:
-    # - "dank-material"
-    # - "midnight"
-    # - "simp1e-late-night"
-    # - "xnm-macchiato"
-
+    # One file in dots/hyprland/themes per theme. Only dank-material exists.
     custom.hyprland.theme = "dank-material";
   };
 }

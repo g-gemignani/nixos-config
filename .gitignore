@@ -1,8 +1,3 @@
-# Ignore decrypted SSH tarballs and temporary artifacts (moved to secrets/)
-secrets/ssh_keys.tar
-secrets/ssh_keys
-secrets/ssh_keys.*.tmp
-
 # nixos-rebuild build drops a result symlink in the repo
 result
 result-*
