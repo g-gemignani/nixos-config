@@ -40,9 +40,10 @@
       username = "gemignani";
     in
     {
-      # One formatter, so `nix fmt` and the editor agree. pkgs.nixfmt is the
-      # RFC-style build, which is what every file in this repo already uses.
-      formatter.${system} = pkgs.nixfmt;
+      # One formatter, so `nix fmt` and the editor agree. nixfmt-tree runs
+      # nixfmt in the RFC style on every file. Bare nixfmt with no arguments
+      # reads stdin, so `nix fmt` waits for input.
+      formatter.${system} = pkgs.nixfmt-tree;
 
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
