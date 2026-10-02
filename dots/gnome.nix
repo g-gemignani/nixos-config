@@ -6,7 +6,7 @@
 # do not touch is GNOME Shell itself: the top bar, the overview and the dash
 # are drawn by the shell, not by GTK. This file covers only that gap, plus
 # wallpaper rotation.
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   extensions = with pkgs.gnomeExtensions; [
@@ -27,6 +27,23 @@ in
   # ~/.config, so a fresh machine rotates wallpapers without a manual step.
   xdg.configFile."autostart/variety.desktop".source =
     "${pkgs.variety}/share/applications/variety.desktop";
+
+  # GNOME asks before an app takes a screenshot through the portal. It shows
+  # that dialog only for the focused app, and flameshot never has focus, so
+  # every capture fails. A stored "yes" skips the dialog. The portal takes
+  # the app ID from the systemd scope name: the autostart daemon runs in
+  # app-gnome-Flameshot-<pid>.scope, and the Shift+Print command in
+  # app-gnome-env-<pid>.scope. The call fails outside a session, which is
+  # harmless.
+  home.activation.allowPortalScreenshot = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    for app in Flameshot env; do
+      ${pkgs.glib.bin}/bin/gdbus call --session \
+        -d org.freedesktop.impl.portal.PermissionStore \
+        -o /org/freedesktop/impl/portal/PermissionStore \
+        -m org.freedesktop.impl.portal.PermissionStore.SetPermission \
+        screenshot true screenshot "$app" "['yes']" >/dev/null 2>&1 || true
+    done
+  '';
 
   dconf.settings = {
     "org/gnome/shell" = {
@@ -60,6 +77,22 @@ in
       static-blur = true;
       brightness = 0.6;
       sigma = 30;
+    };
+
+    # Shift+Print opens flameshot. GNOME binds Shift+Print to its own
+    # full-screen shot by default, so that action moves to Alt+Print.
+    "org/gnome/shell/keybindings" = {
+      screenshot = [ "<Alt>Print" ];
+    };
+    "org/gnome/settings-daemon/plugins/media-keys" = {
+      custom-keybindings = [
+        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+      ];
+    };
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
+      name = "Flameshot GUI";
+      binding = "<Shift>Print";
+      command = "env QT_QPA_PLATFORM=xcb flameshot gui";
     };
 
     # A dock on the left edge, sized to its icons rather than the full screen,

@@ -253,6 +253,11 @@ in
     configType = "hyprlang";
     plugins = [ hyprbars ];
     systemd.enable = false;
+    # nixos/desktop.nix installs the portals. With a package here, Home
+    # Manager points NIX_XDG_DESKTOP_PORTAL_DIR at a directory that holds the
+    # Hyprland portal only. GNOME then has no Screenshot portal, and
+    # flameshot hangs.
+    portalPackage = null;
     xwayland.enable = true;
     settings = theme.hyprlandSettings // {
       "$mod" = "ALT";
