@@ -143,6 +143,18 @@ vpn() {
   esac
 }
 
+# Complete the action, then the region from the installed vpn-*.service units
+_vpn() {
+  local cur=${COMP_WORDS[COMP_CWORD]} regions
+  if ((COMP_CWORD == 1)); then
+    mapfile -t COMPREPLY < <(compgen -W "start stop status" -- "$cur")
+  elif ((COMP_CWORD == 2)); then
+    regions=$(systemctl list-unit-files 'vpn-*.service' --no-legend | sed -E 's/^vpn-(.*)\.service.*/\1/')
+    mapfile -t COMPREPLY < <(compgen -W "$regions" -- "$cur")
+  fi
+}
+complete -F _vpn vpn
+
 alias update-all='update_all'
 alias validate-nix-config='validate_nix_config'
 
