@@ -108,7 +108,7 @@ EOF2
 
   # ── 5. Show new generation state ─────────────────────────────────────────
   # No cleanup here. boot.loader.systemd-boot.configurationLimit caps the boot
-  # entries, and nix.gc deletes generations older than 30 days every week.
+  # entries, and nix.gc deletes generations older than 7 days every week.
   new_gen=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
     | grep current | awk '{print $1}')
   echo -e "\nUpdate complete! New generation: $new_gen | Previous safe generation was: $safe_gen"
