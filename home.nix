@@ -63,6 +63,7 @@
       ./dots/alacritty.nix
       ./dots/gnome.nix
       ./dots/hyprland.nix
+      ./dots/keepass.nix
       ./dots/nvim.nix
       ./dots/vscode.nix
     ];
