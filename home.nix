@@ -66,6 +66,7 @@
       ./dots/keepass.nix
       ./dots/nvim.nix
       ./dots/vscode.nix
+      ./dots/zed.nix
     ];
 
     # No home.sessionVariables here. Home Manager exports them from ~/.profile,
@@ -76,5 +77,22 @@
 
     # One file in dots/hyprland/themes per theme. Only dank-material exists.
     custom.hyprland.theme = "dank-material";
+
+    # Home Manager owns ~/.config/mimeapps.list, so the default apps live here
+    # and in the dots/ module of each app. The file is read-only: an app that
+    # tries to make itself the default fails, and the change goes here.
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "text/html" = "google-chrome.desktop";
+        "x-scheme-handler/http" = "google-chrome.desktop";
+        "x-scheme-handler/https" = "google-chrome.desktop";
+        "x-scheme-handler/about" = "google-chrome.desktop";
+        "x-scheme-handler/unknown" = "google-chrome.desktop";
+        "application/pdf" = "google-chrome.desktop";
+        # Claude Code writes this desktop file to ~/.local/share/applications.
+        "x-scheme-handler/claude-cli" = "claude-code-url-handler.desktop";
+      };
+    };
   };
 }

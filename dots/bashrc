@@ -4,6 +4,10 @@ bind '"\e[A":history-search-backward'
 bind '"\e[B":history-search-forward'
 export CODING_DIR="$HOME/Coding"
 export NIX_DIR="${NIX_DIR:-$HOME/nixos-config}"
+# Zed for every editor prompt: git, sudoedit, crontab -e. --wait blocks
+# until the tab closes, so the caller reads the saved file.
+export EDITOR="zeditor --wait"
+export VISUAL="$EDITOR"
 
 # The body runs in a subshell, so its cd never leaks into the calling shell.
 update_all() (

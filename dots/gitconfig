@@ -8,4 +8,4 @@
 	ci = commit
 	lg = log --oneline --graph --decorate --all
 [core]
-	editor = nvim
+	editor = zeditor --wait
