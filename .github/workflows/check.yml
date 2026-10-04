@@ -17,7 +17,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Formatting
-        run: nix fmt -- --check .
+        run: nix fmt -- --ci
 
       # shellcheck finds what `bash -n` cannot: an unchecked cd, a masked
       # return value, an unquoted word. The build syntax-checks dots/bashrc
