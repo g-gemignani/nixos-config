@@ -6,7 +6,8 @@ checks. This file adds only what an agent gets wrong.
 ## Where things live
 
 Do not look for the VPN units, the sops secrets or the VS Code settings in
-`nixos/configuration.nix` or `home.nix`. That file only imports.
+`nixos/configuration.nix` or `home.nix`. Those two files hold the base settings and import the
+modules below.
 
 - OpenVPN units, the kill switch and `sops.secrets`: `nixos/vpn.nix`
 - Tunnel definitions: `vpn/regions.nix`, the one place a tunnel is named
