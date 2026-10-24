@@ -29,6 +29,8 @@
       nix-search-cli
       nixfmt
       nixd
+      # Codex CLI. The image-gen skill uses it as a second image generator.
+      codex
       # Claude Code plugin hooks (ponytail) run node scripts.
       nodejs
       # Voice mode in Claude Code records with `rec`, which sox gives.
