@@ -30,7 +30,8 @@
     vulkan-tools
     wineWow64Packages.staging
     # coding
-    python3
+    # Pillow is for the viewer mod, which decodes images with python3 -I
+    (python3.withPackages (ps: [ ps.pillow ]))
     uv
     poetry
     cargo
