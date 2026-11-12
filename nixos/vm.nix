@@ -73,7 +73,9 @@
     # value is readable in the nix store.
     initialPassword = "nixos";
     # The host user's key, for the SSH login above.
-    openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICthvEE++D3oEGLaO2t5/GkNeu9TDAr7x91nYyQrmCe/ twentyfour" ];
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICthvEE++D3oEGLaO2t5/GkNeu9TDAr7x91nYyQrmCe/ twentyfour"
+    ];
   };
 
   # The host shares ~/vms/transfer read-only, to copy files in.
