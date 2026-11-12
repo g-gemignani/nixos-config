@@ -12,6 +12,7 @@
     ./nix-settings.nix
     ./packages.nix
     ./vpn.nix
+    ./disk-encryption.nix
   ];
 
   # Use the systemd-boot EFI boot loader.
