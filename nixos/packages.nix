@@ -23,12 +23,6 @@
     dnsutils
     rar
     unar
-    # gaming
-    lutris # set wine-ge-proton as runner for Battle.net
-    winetricks
-    cabextract
-    vulkan-tools
-    wineWow64Packages.staging
     # coding
     # Pillow is for the viewer mod, which decodes images with python3 -I
     (python3.withPackages (ps: [ ps.pillow ]))
@@ -40,7 +34,6 @@
     code-cursor
     claude-code
     networkmanagerapplet
-    transmission_4-qt
     wdisplays
     blueman
     # sops for encrypting/decrypting secrets stored in the repo
@@ -51,25 +44,7 @@
     xournalpp
   ];
 
-  # enable32Bit is what wine and steam need. The mesa drivers come with the
-  # option: hardware.graphics.package already defaults to pkgs.mesa.
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true;
-  };
-
-  programs.gamemode.enable = true;
-
-  # The module, not just pkgs.steam. It is what brings the controller udev
-  # rules and the 32-bit FHS wrapper. It opens no ports: remotePlay and
-  # dedicatedServer both default to openFirewall = false.
-  programs.steam.enable = true;
-
-  services.ollama = {
-    enable = true;
-    package = pkgs.ollama-vulkan;
-    loadModels = [ "gemma:2b" ];
-  };
+  hardware.graphics.enable = true;
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.

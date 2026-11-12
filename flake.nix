@@ -38,6 +38,23 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       username = "gemignani";
+      # The modules that both hosts share.
+      common = [
+        {
+          nixpkgs.config.allowUnfree = true;
+          # Replace nixpkgs' claude-code with the hourly-updated flake package.
+          nixpkgs.overlays = [ inputs.claude-code.overlays.default ];
+        }
+        home-manager.nixosModules.home-manager
+        ./home.nix
+      ];
+      host =
+        modules:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = common ++ modules;
+          specialArgs = { inherit inputs username; };
+        };
     in
     {
       # One formatter, so `nix fmt` and the editor agree. nixfmt-tree runs
@@ -55,21 +72,14 @@
         ];
       };
 
-      nixosConfigurations.${username} = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          {
-            nixpkgs.config.allowUnfree = true;
-            # Replace nixpkgs' claude-code with the hourly-updated flake package.
-            nixpkgs.overlays = [ inputs.claude-code.overlays.default ];
-          }
+      nixosConfigurations = {
+        ${username} = host [
           ./nixos/configuration.nix
           sops-nix.nixosModules.sops
-          home-manager.nixosModules.home-manager
-          ./home.nix
         ];
-
-        specialArgs = { inherit inputs username; };
+        # The work VM on the company laptop, see nixos/vm.nix. The name is its
+        # hostname, so update_all finds it.
+        "${username}-vm" = host [ ./nixos/vm.nix ];
       };
     };
 }

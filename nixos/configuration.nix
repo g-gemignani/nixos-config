@@ -11,6 +11,7 @@
     ./network.nix
     ./nix-settings.nix
     ./packages.nix
+    ./personal.nix
     ./vpn.nix
     ./disk-encryption.nix
   ];
