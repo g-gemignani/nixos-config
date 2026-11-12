@@ -13,6 +13,8 @@
     git
     gh
     glab
+    # The simple-english hook of claude-config parses its input with jq.
+    jq
     pinentry-curses
     htop
     tree
