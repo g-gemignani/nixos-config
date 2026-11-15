@@ -28,6 +28,24 @@ in
   xdg.configFile."autostart/variety.desktop".source =
     "${pkgs.variety}/share/applications/variety.desktop";
 
+  # Variety rewrites variety.conf from its preferences dialog, so the file
+  # stays mutable and only the image sources are set here. Its default
+  # source, /usr/share/backgrounds, does not exist on NixOS, so without this
+  # step Variety finds no images and never changes the wallpaper. Unsplash is
+  # off because its API answers 403 to the key that Variety ships with.
+  home.activation.varietySources = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    conf="$HOME/.config/variety/variety.conf"
+    if [ ! -e "$conf" ]; then
+      mkdir -p "$(dirname "$conf")"
+      install -m 644 ${pkgs.variety}/${pkgs.python3.sitePackages}/variety/data/config/variety.conf "$conf"
+    fi
+    ${pkgs.gnused}/bin/sed -i \
+      -e '/^src[0-9]* = [A-Za-z]*|\(bing\|unsplash\)|/d' \
+      -e '\#^src[0-9]* = [A-Za-z]*|folder|/usr/share/backgrounds$#d' \
+      -e '/^\[sources\]$/a src90 = True|bing|Bing Photo of the Day\nsrc91 = False|unsplash|High-resolution photos from Unsplash.com' \
+      "$conf"
+  '';
+
   # GNOME asks before an app takes a screenshot through the portal. It shows
   # that dialog only for the focused app, and flameshot never has focus, so
   # every capture fails. A stored "yes" skips the dialog. The portal takes
