@@ -23,6 +23,11 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
 
+  # The VM disk is 97 GB, and seven generations filled it. Keep fewer.
+  boot.loader.systemd-boot.configurationLimit = 3;
+  nix.gc.dates = lib.mkForce "daily";
+  nix.gc.options = lib.mkForce "--delete-older-than 3d";
+
   fileSystems."/" = {
     device = "/dev/disk/by-label/nixos";
     fsType = "ext4";
