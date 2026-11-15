@@ -17,6 +17,7 @@
     jq
     pinentry-curses
     htop
+    tmux
     tree
     silver-searcher
     # Chrome crashes on Wayland with GTK4. GTK3 is stable.
