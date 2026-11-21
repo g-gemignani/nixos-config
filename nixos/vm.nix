@@ -5,6 +5,7 @@
 {
   lib,
   modulesPath,
+  pkgs,
   username,
   ...
 }:
@@ -42,6 +43,23 @@
   };
 
   zramSwap.enable = true;
+
+  # The SPICE agent lets the viewer send its window size, so QEMU and GNOME
+  # resize the guest screen to fit. The clipboard still does not work on Wayland.
+  services.spice-vdagentd.enable = true;
+  # GNOME 50 skips the autostart file of the session agent, because it sets
+  # X-GNOME-Autostart-Phase. Without the session agent the daemon never opens
+  # the channel, so run the agent as a user service of the desktop session.
+  systemd.user.services.spice-vdagent = {
+    description = "SPICE session agent";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.spice-vdagent}/bin/spice-vdagent -x";
+      Restart = "on-failure";
+    };
+  };
 
   # SSH from the host, for copy and paste in a host terminal. The SPICE
   # clipboard agent cannot work here, because GNOME runs on Wayland.
