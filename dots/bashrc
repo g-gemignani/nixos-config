@@ -110,13 +110,16 @@ EOF2
       ;;
   esac
 
-  # ── 5. Show new generation state ─────────────────────────────────────────
-  # No cleanup here. boot.loader.systemd-boot.configurationLimit caps the boot
-  # entries, and nix.gc deletes generations older than 7 days every week.
+  # ── 5. Free dead store paths, show new generation state ──────────────────
+  # nix-store --gc deletes only paths that no root holds. It keeps every
+  # generation, so the rollback to $safe_gen still works. The Godot APK
+  # SDK and JDK are roots (`nix build -o`), so they stay. nix.gc deletes
+  # old generations on its own timer.
+  echo -e "\nCollecting Nix garbage..."
+  sudo nix-store --gc 2>&1 | tail -1
   new_gen=$(sudo nix-env --list-generations --profile /nix/var/nix/profiles/system \
     | grep current | awk '{print $1}')
   echo -e "\nUpdate complete! New generation: $new_gen | Previous safe generation was: $safe_gen"
-  echo "To reclaim space now: sudo nix-collect-garbage -d"
 )
 
 validate_nix_config() (

@@ -28,6 +28,12 @@
   boot.loader.systemd-boot.configurationLimit = 3;
   nix.gc.dates = lib.mkForce "daily";
   nix.gc.options = lib.mkForce "--delete-older-than 3d";
+  # Claude Code scratchpads and viewer images reached 6.5 GB in /tmp. Delete
+  # files older than 2 days. The age is per file, so live sessions keep theirs.
+  systemd.tmpfiles.rules = [
+    "e /tmp/claude-1000 - - - 2d"
+    "e /tmp/claude-viewer - - - 2d"
+  ];
 
   fileSystems."/" = {
     device = "/dev/disk/by-label/nixos";
